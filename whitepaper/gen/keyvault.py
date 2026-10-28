@@ -387,35 +387,35 @@ def tree_svg():
     s += box(50, 36, "Need full read and write", "in the surviving region?")
     s += right(360, 36, 450, "No")
     s += box(450, 36, "Eligible same-geography pair", "and accept read-only recovery?")
-    s += box(850, 0, "Secrets and certificates - Pattern 2", "One vault with a paired-region copy", "s")
-    s += box(850, 92, "Secrets and certificates - Pattern 1", "Independent regional vaults", "s")
+    s += box(850, 0, "Standard or Premium vault", "in a paired region", "k")
+    s += box(850, 92, "Standard or Premium vault", "in each region", "k")
     s += link("M760 62 C810 62 810 26 850 26", 773, 48, "Yes")
     s += link("M605 88 C605 118 810 118 850 118", 615, 107, "No")
     s += link("M205 88 C205 174 810 174 850 118", 215, 145, "Yes")
     s += '<text x="50" y="194" font-size="17" font-weight="700" fill="#0F548C">Keys - validate the consuming service first</text>'
     s += box(50, 210, "Must physical key custody remain", "in an HSM outside Microsoft?")
     s += right(360, 210, 850)
-    s += box(850, 210, "Keys - Pattern 6", "Managed HSM + EKM; no geo-replication", "w")
+    s += box(850, 210, "Managed HSM", "with external key management", "k")
     s += down(205, 210, 284)
     s += box(50, 284, "Need a shared replicated key store", "with healthy-region read and write?")
     s += right(360, 284, 450)
     s += box(450, 284, "External HSM as key origin?", "Import key material through BYOK")
     s += right(760, 284, 850)
-    s += box(850, 284, "Keys - Pattern 5", "Replicated Managed HSM + BYOK", "k")
+    s += box(850, 284, "Managed HSM geo-replication", "with external HSM and BYOK", "k")
     s += link("M605 336 C605 384 810 384 850 384", 615, 359, "No")
-    s += box(850, 358, "Keys - Pattern 4", "Replicated Managed HSM; generate key", "k")
+    s += box(850, 358, "Managed HSM with geo-replication", "", "k")
     s += down(205, 284, 432)
     s += box(50, 432, "Can the service use independent", "regional vaults and keys?")
     s += right(360, 432, 450)
     s += box(450, 432, "External HSM as key origin?", "Import key material through BYOK")
     s += right(760, 432, 850)
-    s += box(850, 432, "Keys - Pattern 3", "Premium vault per region + BYOK", "k")
+    s += box(850, 432, "Premium vault per region", "with external HSM and BYOK", "k")
     s += link("M605 484 C605 532 810 532 850 532", 615, 507, "No")
-    s += box(850, 506, "Keys - Pattern 2", "Regional vaults; generate independent keys", "k")
+    s += box(850, 506, "Standard or Premium vault in each region", "", "k")
     s += down(205, 432, 580)
     s += box(50, 580, "Eligible pair and accept Microsoft", "recovery timing and read-only access?")
     s += right(360, 580, 850)
-    s += box(850, 580, "Keys - Pattern 1", "Standard or Premium + paired-region copy", "k")
+    s += box(850, 580, "Standard or Premium vault", "with paired-region replication", "k")
     s += '<text x="460" y="648" font-size="13" fill="#5B6778">Standard: software protection; Premium: HSM protection</text>'
     s += down(205, 580, 654)
     s += box(50, 654, "Revisit the workload design", "No candidate meets these requirements", "w")
@@ -424,7 +424,7 @@ def tree_svg():
 
 def page5():
     inner = tree_svg()
-    svg_tree = (f'<svg viewBox="0 0 1220 730" width="100%" role="img" aria-label="Decision tree covering Secrets and certificates - Patterns 1-2 and Keys - Patterns 1-6. Check the consuming service, external key custody, shared replicated key requirements, independent regional key support, eligible pairing, and BYOK. Pattern 1 uses Standard for software protection or Premium for HSM protection." '
+    svg_tree = (f'<svg viewBox="0 0 1220 730" width="100%" role="img" aria-label="Decision tree identifying patterns by name for secrets and certificates and keys. Check the consuming service, external key custody, shared replicated key requirements, independent regional key support, eligible pairing, and BYOK. Paired-region vault replication uses Standard for software protection or Premium for HSM protection." '
                 f'font-family="{FONT}" style="display:block">{inner}</svg>')
     refs = [
         ("Microsoft-managed failover to a paired region", "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region"),

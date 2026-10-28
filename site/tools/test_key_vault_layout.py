@@ -182,15 +182,23 @@ class KeyVaultLayoutTests(unittest.TestCase):
 
     def test_graphical_tree_covers_new_patterns_without_abbreviating_certificates(self):
         tree = keyvault.tree_svg()
-        for i in range(1, 7):
-            self.assertIn(f"Keys - Pattern {i}", tree)
-        self.assertNotIn("Keys - Pattern 7", tree)
-        self.assertEqual(tree.count("Keys - Pattern 1"), 1)
-        self.assertIn("Standard or Premium + paired-region copy", tree)
+        text = " ".join(ET.fromstring(f"<svg>{tree}</svg>").itertext())
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        for title in re.findall(r"### Pattern \d: (.*?) \{#", body):
+            self.assertIn(title, text)
+        self.assertNotRegex(text, r"Pattern \d")
         self.assertIn("Standard: software protection; Premium: HSM protection", tree)
-        for i in (1, 2):
-            self.assertIn(f"Secrets and certificates - Pattern {i}", tree)
+        self.assertIn("Secrets and certificates", tree)
         self.assertNotIn("Secrets pattern", tree)
+
+    def test_decision_tree_pattern_boxes_share_colors(self):
+        tree = ET.fromstring(f"<svg>{keyvault.tree_svg()}</svg>")
+        results = [rect for rect in tree.findall("rect") if rect.get("x") == "850"]
+        self.assertEqual(len(results), 8)
+        self.assertEqual({(rect.get("fill"), rect.get("stroke")) for rect in results},
+                         {("#EEF5FC", "#0F6CBD")})
+        labels = [text for text in tree.findall("text") if text.get("x") == "860"]
+        self.assertEqual({text.get("fill") for text in labels}, {"#0B3A63", "#0F548C"})
 
     def test_paired_region_pattern_combines_tiers_without_broadening_service_support(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
