@@ -32,7 +32,7 @@ Key Vault is often a runtime dependency: an application can need keys, secrets, 
 > [!IMPORTANT]
 > *Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.*
 >
-> See [Microsoft-managed failover to a paired region](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region) for regional eligibility and [Azure Key Vault security worlds](https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds) for HSM cryptographic boundaries and backup/restore geography requirements.
+> See [Microsoft-managed failover to a paired region](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region) for Key Vault regional failover eligibility, [Reliability in Azure Key Vault Managed HSM](https://learn.microsoft.com/azure/reliability/reliability-managed-hsm) for Managed HSM regional resiliency and replication, and [Azure Key Vault security worlds](https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds) for HSM cryptographic boundaries and backup/restore geography requirements.
 
 When you plan a multi-region architecture on Azure, check how your target regions are paired. Pairing affects disaster recovery options, data replication and data residency.
 
