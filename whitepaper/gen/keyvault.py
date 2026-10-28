@@ -249,7 +249,7 @@ def page1():
                  "Data can be recoverable while the application cannot start without its keys, secrets, and certificates. Key Vault is multi-tenant; Managed HSM is single-tenant.")
             + '<div class="row mt12" style="gap:20px;align-items:stretch">'
               '<div class="note" style="flex:1;padding:9px 12px"><h4>Paired regions</h4><p style="font-size:10.8px;line-height:1.4">Eligible Standard/Premium vaults replicate asynchronously to a Microsoft-managed copy. Microsoft may take hours or longer to initiate failover; afterward access is read-only. Private Link reconnection can add 20 minutes.</p></div>'
-              '<div class="note" style="flex:1;padding:9px 12px"><h4>Nonpaired regions and exceptions</h4><p style="font-size:10.8px;line-height:1.4">Use independent vaults or supported Managed HSM replication. Check 3+0, asymmetric 3+1, and cross-geography 3+1. Brazil South, Brazil Southeast, West US 3, and nonpaired regions lack Microsoft-managed vault failover.</p></div></div>'
+              '<div class="note" style="flex:1;padding:9px 12px"><h4>Microsoft-managed failover exclusions</h4><p style="font-size:10.8px;line-height:1.4"><em>Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.</em> Use independent vaults or supported Managed HSM replication. See <a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region">failover eligibility</a> and <a href="https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds">security worlds</a>.</p></div></div>'
             + grid
             + scenario_summary())
     return page(body)
@@ -427,7 +427,8 @@ def page5():
     svg_tree = (f'<svg viewBox="0 0 1220 730" width="100%" role="img" aria-label="Decision tree covering Secrets and certificates - Patterns 1-2 and Keys - Patterns 1-6. Check the consuming service, external key custody, shared replicated key requirements, independent regional key support, eligible pairing, and BYOK. Pattern 1 uses Standard for software protection or Premium for HSM protection." '
                 f'font-family="{FONT}" style="display:block">{inner}</svg>')
     refs = [
-        ("Reliability in Azure Key Vault", "https://learn.microsoft.com/azure/reliability/reliability-key-vault"),
+        ("Microsoft-managed failover to a paired region", "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region"),
+        ("Azure Key Vault security worlds", "https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds"),
         ("Azure Key Vault availability and redundancy", "https://learn.microsoft.com/azure/key-vault/general/disaster-recovery-guidance"),
         ("Azure paired regions", "https://learn.microsoft.com/azure/reliability/regions-paired"),
         ("Managed HSM multi-region replication", "https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication"),

@@ -110,6 +110,26 @@ class KeyVaultLayoutTests(unittest.TestCase):
                 self.assertIn(condition, guidance)
         self.assertIn("#failover-guidance", keyvault.page2())
 
+    def test_failover_exclusions_are_evergreen_across_formats(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        deck = (ROOT / "decks" / "full" / "key-vault.js").read_text(encoding="utf-8")
+        callout = ("Microsoft-managed failover is not supported for non-paired regions, "
+                   "regions with asymmetric pairing or paired regions across two different geographies.")
+        references = (
+            "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region",
+            "https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds",
+        )
+        self.assertIn(f"> [!IMPORTANT]\n> *{callout}*", body)
+        self.assertIn(f"<em>{callout}</em>", keyvault.page1())
+        for source in (body, keyvault.page1(), keyvault.page5(), deck):
+            with self.subTest(source=source[:60]):
+                for url in references:
+                    self.assertIn(url, source)
+                for name in ("Brazil South", "Brazil Southeast", "West US 3", "East US",
+                             "South Central US", "Qatar Central", "Belgium Central", "Spain Central"):
+                    self.assertNotIn(name, source)
+        self.assertIn(callout, deck)
+
     def test_scenario_sections_preserve_removed_matrix_conditions(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         scenarios = body.split("## Common key-management scenarios", 1)[1].split("## Decision tree", 1)[0]

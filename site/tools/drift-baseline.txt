@@ -90,8 +90,9 @@ multi region platform strategy
 # key-vault-across-regions
 a fresh key in a new vault is not a substitute
 a key store s replication capability does not establish support for every service s replication or restore operation
-a pair can cross geography boundaries for example brazil south and south central us
+a pairing isn t always reciprocal
 a pairing relationship is not necessarily reciprocal
+a region s designated pair might not point back to it
 a requirement for physical key custody outside microsoft
 a second endpoint alone does not provide safe fallback
 a second vault alone does not provide fallback
@@ -108,9 +109,11 @@ an independent vault workload stamp is not applicable to this tenant level servi
 asynchronous replication means recent changes can be lost
 asynchronous replication shares key material roles and permissions between regions
 automatic zone redundancy where supported
+availability zones where supported provide resiliency within a region not across regions
 azure sql database azure sql managed instance and azure cosmos db geo replication database geo replication
 azure sql database azure sql managed instance and azure cosmos db geo restore database geo restore
 azure storage blob object replication storage object replication
+before you rely on built in geo replication check each service s documentation for regional eligibility
 best for watch for
 both data copies depend on microsoft managed vault recovery
 both depend on that account s cmk
@@ -121,7 +124,6 @@ candidates for supported shared key dependencies
 changes replicate within six minutes
 check the scenario conditions before following the chart
 check three design constraints
-check west us 3 and east us against the service s replication exclusions
 choose software protected or hsm protected operations and accept microsoft managed recovery timing
 choose the tier for the required key protection and consuming service support
 compare its cost with the accepted risk of microsoft managed vault recovery not an arbitrary number of keys threshold
@@ -147,6 +149,7 @@ do not assume arbitrary application signing or encryption works unchanged
 do not assume managed hsm or ekm support from general managed disk support
 do not assume sql s key copy design applies to cosmos db
 do not carry grs s shared account constraint into this topology
+do not infer microsoft managed key vault failover support from a one way pairing
 do not infer site recovery support from a general disk encryption capability
 do not store secret values in the iac repository
 do not treat microsoft 365 as a regional deployment stamp
@@ -182,6 +185,7 @@ identify whether the requirement concerns an azure rights management tenant key 
 import the key into the primary pool through byok then use managed hsm geo replication
 import then geo replicate
 imported key material now resides in azure hsms
+in a region without a pair choose a secondary region yourself and configure cross region recovery for each service
 in eligible same geography region pairs key vault standard and premium replicate vault contents asynchronously to a microsoft managed secondary
 include the source disks and cache storage account in the design
 independent regional vaults do not let you assign a different key store to each grs replica
@@ -229,7 +233,6 @@ no end to end microsoft sla covers the external components
 no end to end sla for external keys
 no key creation or rotation until normal operation returns
 no managed hsm geo replication for external keys
-no paired region for example qatar central belgium central and spain central
 once initiated public endpoint convergence is designed to take a few minutes
 one managed hsm pool with a primary and one supported extended region
 one premium vault per workload per region
@@ -321,7 +324,6 @@ the healthy region continues serving reads and writes
 the healthy region continues serving reads and writes through the pool s endpoint
 the hsm backed byok patterns use premium or managed hsm
 the key encryption key never leaves it
-the key vault reliability guide lists exclusions including brazil south brazil southeast west us 3 and nonpaired regions
 the pipeline populates each regional vault
 the pipeline populates the primary vault
 the restore target must retain access to the original keys

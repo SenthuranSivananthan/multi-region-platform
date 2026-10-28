@@ -26,8 +26,9 @@ module.exports = (pres, L) => {
       fontFace: F.body, fontSize: 11, color: C.text, margin: 0.1, border: { type: 'solid', pt: 0.75, color: C.soft }, autoPage: false,
     });
     L.txt(s, 'Once initiated, endpoint convergence takes minutes; Private Link can add 20 minutes. Read-only afterward. These are not total recovery times.', 0.6, 6.05, 12.13, 0.3, { fontSize: 11, color: C.ink });
-    L.txt(s, 'Check 3+0 (no pair), asymmetric 3+1, and cross-geography 3+1. Some pairs and all nonpaired regions lack this failover model.', 0.6, 6.3, 12.13, 0.4, { fontSize: 11, color: C.muted });
-    s.addNotes('Microsoft-managed failover is best effort. Initiation can take hours or longer after the outage; endpoint convergence is not the application RTO. Key Vault can be a runtime dependency even when data is recoverable. Constraints: no pair, asymmetric pairing, and cross-geography pairing. Exclusions include Brazil South, Brazil Southeast, West US 3, and nonpaired regions. https://learn.microsoft.com/azure/reliability/reliability-key-vault . ' + reference);
+    L.box(s, 0.6, 6.4, 12.13, 0.5, { fill: C.b50 });
+    L.txt(s, 'Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.', 0.75, 6.46, 11.83, 0.35, { fontSize: 11, italic: true, color: C.ink });
+    s.addNotes('Microsoft-managed failover is best effort. Initiation can take hours or longer after the outage; endpoint convergence is not the application RTO. Key Vault can be a runtime dependency even when data is recoverable. Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies. Use independent vaults or supported Managed HSM replication. Regional eligibility: https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region . HSM cryptographic boundaries and backup/restore geography requirements: https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds . ' + reference);
     s.addNotes(article.split('### Failover guidance\n')[1].split('\n## Choose the product')[0] + '\n' + reference + '#failover-guidance');
   }
 
