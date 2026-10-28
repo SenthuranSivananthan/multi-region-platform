@@ -265,7 +265,7 @@ def scenario_summary():
         ("PostgreSQL / MySQL Flexible", "Replica, geo-backup, and geo-restore have different key, region, and identity rules."),
         ("Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication", "SQL permits documented regional key copies; Cosmos DB has account-level CMK requirements."),
         ("Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore", "Retain historical keys; validate target region, identities, and backup requirements."),
-        ("Purview Information Protection", "Identify tenant-key BYOK versus Customer Key. Preserve keys for old content."),
+        ("Purview Information Protection", "Managed HSM geo-replication, with or without BYOK, is suitable. EKM remains feature-specific. Preserve keys for old content."),
     ]
     anchors = ["application-level-encryption", "azure-storage-grs", "storage-object-replication",
                "vm-disk-encryption", "azure-site-recovery", "postgresql-and-mysql-flexible-server",

@@ -296,8 +296,10 @@ Identify whether the requirement concerns an Azure Rights Management tenant key,
 
 - [Standard or Premium vault with paired-region replication](#keys-pattern-1), using Premium: the documented HSM-backed vault option; preserve keys for old content. Standard software-protected keys require feature-specific confirmation.
 - [Premium vault per region with external HSM and BYOK](#keys-pattern-3): use its external-HSM import approach with a dedicated Premium vault. Do not treat Microsoft 365 as a regional deployment stamp.
+- [Managed HSM with geo-replication](#keys-pattern-4): a suitable solution for a shared, regionally replicated key store; configure key access and lifecycle for the specific Information Protection feature.
+- [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): a suitable solution when key material is created in an external HSM and imported into a replicated Managed HSM. Preserve keys for old content.
 
-**Other options require feature-specific confirmation:** [Managed HSM with geo-replication](#keys-pattern-4), [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5), and [Managed HSM with external key management](#keys-pattern-6). Confirm the exact feature's key lifecycle, Managed HSM/BYOK configuration, or supported external-key operations, as applicable. An independent-vault workload stamp is not applicable to this tenant-level service.
+**External key management requires feature-specific confirmation:** [Managed HSM with external key management](#keys-pattern-6) keeps key material outside Microsoft infrastructure rather than importing it into Azure. Confirm the exact feature's integration, key lifecycle, and supported external-key operations. An independent-vault workload stamp is not applicable to this tenant-level service.
 
 ## Decision tree
 
