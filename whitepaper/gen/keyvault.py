@@ -427,23 +427,24 @@ def page5():
     svg_tree = (f'<svg viewBox="0 0 1220 730" width="100%" role="img" aria-label="Decision tree identifying patterns by name for secrets and certificates and keys. Check the consuming service, external key custody, shared replicated key requirements, independent regional key support, eligible pairing, and BYOK. Paired-region vault replication uses Standard for software protection or Premium for HSM protection." '
                 f'font-family="{FONT}" style="display:block">{inner}</svg>')
     refs = [
-        ("Microsoft-managed failover to a paired region", "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region"),
-        ("Azure Key Vault security worlds", "https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds"),
         ("Azure Key Vault availability and redundancy", "https://learn.microsoft.com/azure/key-vault/general/disaster-recovery-guidance"),
+        ("Azure Key Vault security worlds", "https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds"),
         ("Azure paired regions", "https://learn.microsoft.com/azure/reliability/regions-paired"),
-        ("Managed HSM multi-region replication", "https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication"),
         ("External key management", "https://learn.microsoft.com/azure/key-vault/managed-hsm/external-key-management-overview"),
-        ("Supported HSMs for BYOK", "https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys"),
-        ("Services that support customer-managed keys", "https://learn.microsoft.com/azure/security/fundamentals/encryption-customer-managed-keys-support"),
         ("How to choose the right key management solution", "https://learn.microsoft.com/azure/security/fundamentals/key-management-choose"),
         ("Key Vault and Managed HSM SLAs", "https://www.microsoft.com/licensing/docs/view/Service-Level-Agreements-SLA-for-Online-Services"),
+        ("Managed HSM multi-region replication", "https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication"),
+        ("Microsoft-managed failover to a paired region", "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region"),
+        ("Reliability in Azure Key Vault Managed HSM", "https://learn.microsoft.com/azure/reliability/reliability-managed-hsm"),
+        ("Services that support customer-managed keys", "https://learn.microsoft.com/azure/security/fundamentals/encryption-customer-managed-keys-support"),
+        ("Supported HSMs for BYOK", "https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys"),
     ]
     items = "".join(f'<li><a href="{u}">{t}</a></li>' for t, u in refs)
     body = (head("Service guides · Key Vault · Decision tree", "Which Key Vault pattern fits?",
                  "Choose a candidate, not a universal support guarantee. Validate the scenario conditions on page 1 and the detailed online guidance.")
             + f'<div class="figure" id="figKVTree" data-export-width="940" style="margin-top:8px">{svg_tree}</div>'
             + '<div class="eyebrow mt8" style="color:var(--s600)">Reference links · Microsoft Learn</div>'
-            + f'<ul style="list-style:none;columns:3;column-gap:18px;margin-top:4px;font-size:9.6px;line-height:1.45">{items}</ul>')
+            + f'<ul style="columns:3;column-gap:18px;margin-top:4px;padding-left:14px;font-size:9.6px;line-height:1.45">{items}</ul>')
     return page(body)
 
 

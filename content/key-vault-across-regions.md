@@ -309,15 +309,16 @@ Check the scenario conditions before following the chart. Results identify candi
 
 ## Reference links
 
-- [Microsoft-managed failover to a paired region](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region)
 - [Azure Key Vault security worlds](https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds)
-- [Key Vault availability and redundancy](https://learn.microsoft.com/azure/key-vault/general/disaster-recovery-guidance)
 - [Azure paired regions](https://learn.microsoft.com/azure/reliability/regions-paired)
-- [Managed HSM multi-region replication](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication)
 - [External key management](https://learn.microsoft.com/azure/key-vault/managed-hsm/external-key-management-overview)
-- [Services that support CMKs](https://learn.microsoft.com/azure/security/fundamentals/encryption-customer-managed-keys-support)
-- [Key-management product selection](https://learn.microsoft.com/azure/security/fundamentals/key-management-choose)
 - [HSM-protected key import](https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys)
+- [Key Vault availability and redundancy](https://learn.microsoft.com/azure/key-vault/general/disaster-recovery-guidance)
+- [Key-management product selection](https://learn.microsoft.com/azure/security/fundamentals/key-management-choose)
+- [Managed HSM multi-region replication](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication)
+- [Microsoft-managed failover to a paired region](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region)
+- [Reliability in Azure Key Vault Managed HSM](https://learn.microsoft.com/azure/reliability/reliability-managed-hsm)
+- [Services that support CMKs](https://learn.microsoft.com/azure/security/fundamentals/encryption-customer-managed-keys-support)
 
 ## Next step
 
