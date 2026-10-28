@@ -77,6 +77,9 @@ class KeyVaultLayoutTests(unittest.TestCase):
         sections = re.split(r"<h3\b", scenarios)[1:]
         self.assertEqual(len(sections), 9)
         for section in sections:
+            self.assertIn("<strong>Patterns you can use:</strong>", section)
+            description = section.split("</h3>", 1)[1].split("<strong>Patterns you can use:</strong>", 1)[0]
+            self.assertRegex(description, r"<p>(?!<strong>)")
             self.assertRegex(section, r'<a href="#keys-pattern-[1-6]">')
             self.assertIn("<ul>", section)
         grs = next(section for section in sections if section.startswith(' id="azure-storage-grs"'))
@@ -143,10 +146,10 @@ class KeyVaultLayoutTests(unittest.TestCase):
             "Application-level encryption": (
                 "software-protected", "HSM-protected", "independent regional keys",
                 "imported keys", "supported external-key operations", "restricted operation set"),
-            "Azure Storage GRS": (
+            "Azure Storage - Geo-redundant storage (GRS)": (
                 "Microsoft-managed vault recovery", "shared key", "proxy availability",
                 "no external-key geo-replication", "different key store to each GRS replica"),
-            "Azure Storage Blob Object Replication": (
+            "Azure Storage - Object replication for block blobs": (
                 "independent keys", "import and authorize", "each account's CMK integration",
                 "proxy and external HSM", "separate accounts"),
             "VM disk encryption": (

@@ -258,8 +258,8 @@ def page1():
 def scenario_summary():
     rows = [
         ("Application encryption", "Match application operations; preserve identifiers and versions."),
-        ("Storage GRS", "One account/key dependency. Independent vaults do not assign separate keys to GRS replicas."),
-        ("Azure Storage Blob Object Replication", "Separate accounts can use independent keys and vaults."),
+        ("Azure Storage - Geo-redundant storage (GRS)", "One account/key dependency. Independent vaults do not assign separate keys to GRS replicas."),
+        ("Azure Storage - Object replication for block blobs", "Separate accounts can use independent keys and vaults."),
         ("VM disk encryption", "Regional Disk Encryption Sets; distinguish guest encryption and Secure Key Release."),
         ("Azure Site Recovery", "Pre-create target-region Disk Encryption Set and vault access. Do not infer HSM support."),
         ("PostgreSQL / MySQL Flexible", "Replica, geo-backup, and geo-restore have different key, region, and identity rules."),
