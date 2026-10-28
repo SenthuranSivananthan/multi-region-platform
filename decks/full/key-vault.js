@@ -35,14 +35,14 @@ module.exports = (pres, L) => {
   const groups = [
     {
       title: 'Secrets and certificates: two patterns',
-      guidance: 'Use Standard or Premium. Roll out one region at a time; IaC is not a secret store. Fallback needs private-endpoint and identity design.',
+      guidance: 'Use Standard or Premium vaults. Roll out one region at a time; IaC is not a secret store. Fallback needs private-endpoint and identity design.',
       patterns: [
-        ['1', 'Key Vault in each region', 'secrets-per-region',
+        ['1', 'Standard or Premium vault in each region', 'secrets-per-region',
           'An approved pipeline loads each vault; IaC configures the resources.',
           'Full read and write in each region.',
           'Mission-critical; short recovery time.',
           'Keep vaults synchronized through the pipeline.'],
-        ['2', 'Key Vault in a paired region', 'secrets-paired-region',
+        ['2', 'Standard or Premium vault in a paired region', 'secrets-paired-region',
           'One vault; Microsoft replicates and fails it over.',
           'Read-only: no create, update, or rotation.',
           'Less critical; accepts Microsoft failover timing.',

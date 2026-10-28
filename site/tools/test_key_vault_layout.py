@@ -90,7 +90,11 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertIn('>Standard or Premium vault with paired-region replication</a>', headers[2])
         self.assertIn('class="table-wrap kv-table kv-wide"', result)
         self.assertEqual(headers[2].count('<th scope="col">'), 7)
-        self.assertIn('>Key Vault in each region</a>', headers[1])
+        self.assertIn('>Standard or Premium vault in each region</a>', headers[1])
+        self.assertIn('>Standard or Premium vault in a paired region</a>', headers[1])
+        for title in ("Standard or Premium vault in each region", "Standard or Premium vault in a paired region"):
+            self.assertIn(title, keyvault.page2())
+            self.assertIn(title, (ROOT / "decks" / "full" / "key-vault.js").read_text(encoding="utf-8"))
         self.assertNotRegex(re.sub(r"<[^>]+>", "", result), r"\b[KS][1-7]\b")
 
     def test_later_patterns_keep_side_by_side_layout(self):
@@ -192,7 +196,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertTrue(all(number == anchor for number, _, anchor in headings))
         self.assertEqual(headings[0][1], "Standard or Premium vault with paired-region replication")
         self.assertNotIn("#keys-pattern-7", body)
-        pattern = body.split("### Pattern 1: Standard or Premium", 1)[1].split("### Pattern 2:", 1)[0]
+        pattern = body.split("## Keys\n", 1)[1].split("### Pattern 1:", 1)[1].split("### Pattern 2:", 1)[0]
         for phrase in ("Standard for software-protected", "Premium for HSM-protected",
                        "Premium does not improve regional recovery control", "Read-only",
                        "no key creation or rotation", "key-vault-keys-paired-region.png"):

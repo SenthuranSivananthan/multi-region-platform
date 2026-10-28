@@ -11,8 +11,8 @@ Key Vault is often a runtime dependency: an application can need keys, secrets, 
 
 **Secrets and Certificates management patterns**
 
-- [Pattern 1: Key Vault in each region](#secrets-certificates-pattern-1)
-- [Pattern 2: Key Vault in a paired region](#secrets-certificates-pattern-2)
+- [Pattern 1: Standard or Premium vault in each region](#secrets-certificates-pattern-1)
+- [Pattern 2: Standard or Premium vault in a paired region](#secrets-certificates-pattern-2)
 
 **Key management patterns**
 
@@ -22,9 +22,6 @@ Key Vault is often a runtime dependency: an application can need keys, secrets, 
 - [Pattern 4: Managed HSM with geo-replication](#keys-pattern-4)
 - [Pattern 5: Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5)
 - [Pattern 6: Managed HSM with external key management](#keys-pattern-6)
-
-> [!IMPORTANT]
-> A key store's replication capability does not establish support for every service's replication or restore operation. Validate key access, identities, networking, rotation, and recovery together.
 
 ## Paired and nonpaired regions
 
@@ -43,7 +40,7 @@ When you plan a multi-region architecture on Azure, check how your target region
 
 In a region without a pair, choose a secondary region yourself and configure cross-region recovery for each service. Availability zones, where supported, provide resiliency within a region, not across regions.
 
-**2. Pairings that only go one way**
+**2. Pairings that only go one way (asymmetric pairing)**
 
 A pairing isn't always reciprocal: a region's designated pair might not point back to it. Do not infer Microsoft-managed Key Vault failover support from a one-way pairing. Before you rely on built-in geo-replication, check each service's documentation for regional eligibility.
 
@@ -78,19 +75,19 @@ With external key management (EKM), Managed HSM authenticates and authorizes req
 
 ## Secrets and certificates
 
-Use Key Vault Standard or Premium. Managed HSM and EKM do not store secrets or certificates. Compare the patterns, then review their distribution diagrams.
+Use Standard or Premium vaults. Managed HSM and EKM do not store secrets or certificates. Compare the patterns, then review their distribution diagrams.
 
-| Compare | [Key Vault in each region](#secrets-certificates-pattern-1) | [Key Vault in a paired region](#secrets-certificates-pattern-2) |
+| Compare | [Standard or Premium vault in each region](#secrets-certificates-pattern-1) | [Standard or Premium vault in a paired region](#secrets-certificates-pattern-2) |
 |---|---|---|
-| Deployment | One vault per workload per region | One vault with a Microsoft-managed paired-region copy |
+| Deployment | One Standard or Premium vault per workload per region | One Standard or Premium vault with a Microsoft-managed paired-region copy |
 | Artifact distribution | Pipeline populates each vault | Pipeline populates primary; Microsoft replicates |
 | During an outage | Full local read and write | Read-only after Microsoft-managed failover |
 | Best fit | Short, customer-controlled recovery | Workloads that accept Microsoft-managed recovery |
 | Main constraint | Keep vaults synchronized | Eligible pair and read-only recovery |
 
-### Pattern 1: Key Vault in each region {#secrets-certificates-pattern-1}
+### Pattern 1: Standard or Premium vault in each region {#secrets-certificates-pattern-1}
 
-- **Deployment:** One vault per workload per region, configured consistently through infrastructure as code (IaC).
+- **Deployment:** One Standard or Premium vault per workload per region, configured consistently through infrastructure as code (IaC).
 - **Artifact origin:** An approved secret-management process supplies secrets and certificates; the pipeline populates each regional vault.
 - **During an outage:** Each surviving region uses its own vault with full read and write access.
 - **Best for:** Workloads that need recovery independent of Microsoft-managed vault failover.
@@ -98,11 +95,11 @@ Use Key Vault Standard or Premium. Managed HSM and EKM do not store secrets or c
 
 :::image type="content" source="./media/key-vault-secrets-per-region.png" alt-text="An approved deployment pipeline loads secrets and certificates into each regional vault independently. There is no vault-to-vault replication." lightbox="./media/key-vault-secrets-per-region.png":::
 
-*Secrets and certificates - Pattern 1: independent regional vaults populated by a pipeline.*
+*Secrets and certificates - Pattern 1: independent Standard or Premium vaults populated by a pipeline.*
 
-### Pattern 2: Key Vault in a paired region {#secrets-certificates-pattern-2}
+### Pattern 2: Standard or Premium vault in a paired region {#secrets-certificates-pattern-2}
 
-- **Deployment:** One vault in a region eligible for Microsoft-managed paired-region replication.
+- **Deployment:** One Standard or Premium vault in a region eligible for Microsoft-managed paired-region replication.
 - **Artifact origin:** The pipeline populates the primary vault; Microsoft asynchronously replicates its contents.
 - **During an outage:** Microsoft decides when to fail over. Afterward you can read, but cannot create, update, renew, or rotate objects until normal operation returns.
 - **Best for:** Workloads that can tolerate Microsoft-managed recovery timing and read-only access.
@@ -110,7 +107,7 @@ Use Key Vault Standard or Premium. Managed HSM and EKM do not store secrets or c
 
 :::image type="content" source="./media/key-vault-secrets-paired-region.png" alt-text="A deployment pipeline loads secrets and certificates into the primary Key Vault. Microsoft asynchronously replicates them to its paired-region copy, which is read-only after Microsoft-managed failover." lightbox="./media/key-vault-secrets-paired-region.png":::
 
-*Secrets and certificates - Pattern 2: one vault with a Microsoft-managed paired-region copy.*
+*Secrets and certificates - Pattern 2: one Standard or Premium vault with a Microsoft-managed paired-region copy.*
 
 Treat each independent region as a deployment stamp. Do not store secret values in the IaC repository. Optional application-level fallback to another vault requires explicit identity, networking, and version-selection design; a second endpoint alone does not provide safe fallback.
 

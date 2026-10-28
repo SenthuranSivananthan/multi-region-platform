@@ -89,7 +89,6 @@ getting started walks through the first additional region in six steps
 multi region platform strategy
 # key-vault-across-regions
 a fresh key in a new vault is not a substitute
-a key store s replication capability does not establish support for every service s replication or restore operation
 a pairing isn t always reciprocal
 a pairing relationship is not necessarily reciprocal
 a region s designated pair might not point back to it
@@ -189,7 +188,7 @@ in a region without a pair choose a secondary region yourself and configure cros
 in eligible same geography region pairs key vault standard and premium replicate vault contents asynchronously to a microsoft managed secondary
 include the source disks and cache storage account in the design
 independent regional vaults do not let you assign a different key store to each grs replica
-independent regional vaults populated by a pipeline
+independent standard or premium vaults populated by a pipeline
 independent vaults with different regional keys
 initiation can take hours or longer independently of other services
 it is not a blanket support guarantee
@@ -200,8 +199,6 @@ keep the product choice separate from the regional deployment choice
 keep using the same vault uri
 keep versions renewal access policies identities and private connectivity ready before an outage
 key vault backups are point in time and restore only within the same subscription and azure geography
-key vault in a paired region secrets certificates pattern 2
-key vault in each region secrets certificates pattern 1
 key vault is often a runtime dependency
 keys uses patterns 1 6
 maintain access to the shared key
@@ -239,10 +236,10 @@ one premium vault per workload per region
 one standard or premium vault per workload per region
 one standard or premium vault with an eligible microsoft managed paired region copy
 one supported extended region
-one vault in a region eligible for microsoft managed paired region replication
+one standard or premium vault in a region eligible for microsoft managed paired region replication
 one vault per workload per region
-one vault per workload per region configured consistently through infrastructure as code iac
-one vault with a microsoft managed paired region copy
+one standard or premium vault per workload per region configured consistently through infrastructure as code iac
+one standard or premium vault with a microsoft managed paired region copy
 only with a documented service specific key copy and rotation design not as a general shared key solution
 optional application level fallback to another vault requires explicit identity networking and version selection design
 other options require feature specific confirmation
@@ -301,6 +298,8 @@ source and destination accounts can use independent keys
 source and destination are separate accounts so their cmk configuration can be independent
 sql database and sql managed instance need the required tde protector keys available to their replicas
 standard or premium vault in each region keys pattern 2
+standard or premium vault in each region secrets certificates pattern 1
+standard or premium vault in a paired region secrets certificates pattern 2
 standard or premium vault in each region or premium vault per region with external hsm and byok
 standard or premium vault with microsoft managed paired region replication
 standard or premium vault with paired region replication
@@ -344,7 +343,6 @@ use sdk retries with exponential backoff and respect dns ttl
 use standard for software protected keys or premium for hsm protected keys
 use supported managed hsm operations including imported keys for byok
 validate each account s identity key versions and recovery behavior
-validate key access identities networking rotation and recovery together
 validate private connectivity from the recovery region
 validate the imported key and complete site recovery configuration
 validate the product and recovery feature

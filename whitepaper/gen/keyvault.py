@@ -279,13 +279,13 @@ def scenario_summary():
 
 
 def page2():
-    c1 = card("1", "Key Vault in each region", [
+    c1 = card("1", "Standard or Premium vault in each region", [
         ("cr", "Created in", "An approved pipeline loads secrets and certificates into each regional vault. IaC configures the vaults."),
         ("ok", "Outage", "Each region keeps full read and write on its own vault."),
         ("bf", "Best for", "Mission-critical workloads that need a short recovery time."),
         ("lm", "Watch for", "You must keep the vaults in sync with your pipeline."),
     ], "figKVS1", "S1")
-    c2 = card("2", "Key Vault in a paired region", [
+    c2 = card("2", "Standard or Premium vault in a paired region", [
         ("cr", "Created in", "Pipeline populates primary; Microsoft asynchronously replicates to its paired-region copy."),
         ("ok", "Outage", "Read-only until failover ends: you can read, but not create, update, or rotate."),
         ("bf", "Best for", "Less critical workloads that accept read-only access and Microsoft's failover timing."),
@@ -293,7 +293,7 @@ def page2():
     ], "figKVS2", "S2")
     guide = ('<div class="row mt12" style="gap:20px;align-items:stretch"><div class="note" style="flex:1;padding:10px 14px"><h4>Design guidance</h4>'
              '<p class="small" style="color:var(--ink);font-size:10.8px">Treat each region as a deployment stamp. Roll changes out sequentially. Never store secret values in IaC. Microsoft-managed failover keeps the vault URI; retry failed requests. Read-only permits supported cryptography and backup, not writes or policy changes. App-level fallback needs ready identities, connectivity, and versions. <a href="https://azure.github.io/multi-region-platform/key-vault-across-regions.html#failover-guidance">Failover and return-to-primary checklist</a>.</p></div>'
-             '<div style="flex:.8;background:var(--s800);border-radius:12px;padding:10px 16px;color:#fff;display:flex;flex-direction:column;justify-content:center"><p style="font-size:11.4px;line-height:1.4;color:#fff">Managed HSM and EKM do not hold secrets or certificates. Use Standard or Premium for both.</p></div></div>')
+             '<div style="flex:.8;background:var(--s800);border-radius:12px;padding:10px 16px;color:#fff;display:flex;flex-direction:column;justify-content:center"><p style="font-size:11.4px;line-height:1.4;color:#fff">Managed HSM and EKM do not hold secrets or certificates. Use Standard or Premium vaults for both.</p></div></div>')
     body = (head("Service guides · Key Vault · Secrets and certificates", "Secrets and certificates: two patterns",
                  "Secrets and certificates can be loaded into any vault by a pipeline. That makes a vault in each region practical.")
             + f'<div class="kv-grid2 mt12">{c1}{c2}</div>' + guide)
