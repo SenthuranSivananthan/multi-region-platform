@@ -1012,6 +1012,7 @@
 .wpf .kv-card .fig { margin: 8px auto 0; width: 100%; max-width: 360px; }
 .wpf .kv-grid3 .fig { max-width: none; }
 .wpf .kv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wpf .kv-grid2 .fig { max-width: 330px; }
 .wpf .kv-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .wpf .kv-grid3 .kv-r { grid-template-columns: 58px 1fr; font-size: 10.2px; }
 .wpf .kv-grid3 .kv-h b { font-size: 12.6px; }
@@ -1041,6 +1042,7 @@
 .wpf .kv-card .fig { margin: 8px auto 0; width: 100%; max-width: 360px; }
 .wpf .kv-grid3 .fig { max-width: none; }
 .wpf .kv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wpf .kv-grid2 .fig { max-width: 330px; }
 .wpf .kv-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .wpf .kv-grid3 .kv-r { grid-template-columns: 58px 1fr; font-size: 10.2px; }
 .wpf .kv-grid3 .kv-h b { font-size: 12.6px; }
@@ -1070,6 +1072,7 @@
 .wpf .kv-card .fig { margin: 8px auto 0; width: 100%; max-width: 360px; }
 .wpf .kv-grid3 .fig { max-width: none; }
 .wpf .kv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wpf .kv-grid2 .fig { max-width: 330px; }
 .wpf .kv-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .wpf .kv-grid3 .kv-r { grid-template-columns: 58px 1fr; font-size: 10.2px; }
 .wpf .kv-grid3 .kv-h b { font-size: 12.6px; }
@@ -1099,6 +1102,7 @@
 .wpf .kv-card .fig { margin: 8px auto 0; width: 100%; max-width: 360px; }
 .wpf .kv-grid3 .fig { max-width: none; }
 .wpf .kv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wpf .kv-grid2 .fig { max-width: 330px; }
 .wpf .kv-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .wpf .kv-grid3 .kv-r { grid-template-columns: 58px 1fr; font-size: 10.2px; }
 .wpf .kv-grid3 .kv-h b { font-size: 12.6px; }
@@ -1128,6 +1132,7 @@
 .wpf .kv-card .fig { margin: 8px auto 0; width: 100%; max-width: 360px; }
 .wpf .kv-grid3 .fig { max-width: none; }
 .wpf .kv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wpf .kv-grid2 .fig { max-width: 330px; }
 .wpf .kv-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .wpf .kv-grid3 .kv-r { grid-template-columns: 58px 1fr; font-size: 10.2px; }
 .wpf .kv-grid3 .kv-h b { font-size: 12.6px; }

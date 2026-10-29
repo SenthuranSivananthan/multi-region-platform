@@ -189,6 +189,7 @@ STYLE = """<style>
   .kv-card .fig { margin: 8px auto 0; width: 100%; max-width: 360px; }
   .kv-grid3 .fig { max-width: none; }
   .kv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .kv-grid2 .fig { max-width: 330px; }
   .kv-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
   .kv-grid3 .kv-r { grid-template-columns: 58px 1fr; font-size: 10.2px; }
   .kv-grid3 .kv-h b { font-size: 12.6px; }
@@ -249,7 +250,7 @@ def page1():
     body = (head("Service guides · Key Vault", "Azure Key Vault across regions",
                  "Data can be recoverable while the application cannot start without its keys, secrets, and certificates. Key Vault is multi-tenant; Managed HSM is single-tenant.")
             + '<div class="row mt12" style="gap:20px;align-items:stretch">'
-              '<div class="note" style="flex:1;padding:9px 12px"><h4>Paired regions</h4><p style="font-size:10.8px;line-height:1.4">Eligible Standard/Premium vaults replicate asynchronously to a Microsoft-managed copy. Microsoft may take hours or longer to initiate failover; afterward access is read-only. Private Link reconnection can add 20 minutes.</p></div>'
+              '<div class="note" style="flex:1;padding:9px 12px"><h4>Standard/Premium failover</h4><p style="font-size:10.8px;line-height:1.4">Keep the same vault URI; Microsoft reroutes requests. Paired-region replicas for certificates, secrets, and dual KEK scenarios need not match consumer regions; confirm consuming-service-specific requirements. See <a href="https://azure.github.io/multi-region-platform/key-vault-across-regions.html#failover-guidance">Failover Guidance</a>.</p></div>'
               '<div class="note" style="flex:1;padding:9px 12px"><h4>Microsoft-managed failover exclusions</h4><p style="font-size:10.8px;line-height:1.4"><em>Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.</em> Use independent vaults or supported Managed HSM replication. See <a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region">failover eligibility</a>, <a href="https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds">security worlds</a>, and <a href="https://learn.microsoft.com/azure/reliability/reliability-managed-hsm">Managed HSM reliability</a>.</p></div></div>'
             + grid
             + scenario_summary())
@@ -292,9 +293,11 @@ def page2():
         ("bf", "Best for", "Less critical workloads that accept read-only access and Microsoft's failover timing."),
         ("lm", "Watch for", "Check eligible same-geography pairing and exclusions. Microsoft can delay failover for hours or longer."),
     ], "figKVS2", "S2")
-    guide = ('<div class="row mt12" style="gap:20px;align-items:stretch"><div class="note" style="flex:1;padding:10px 14px"><h4>Design guidance</h4>'
-             '<p class="small" style="color:var(--ink);font-size:10.8px">Treat each region as a deployment stamp. Roll changes out sequentially. Never store secret values in IaC. Microsoft-managed failover keeps the vault URI; retry failed requests. Read-only permits supported cryptography and backup, not writes or policy changes. App-level fallback needs ready identities, connectivity, and versions. <a href="https://azure.github.io/multi-region-platform/key-vault-across-regions.html#failover-guidance">Failover and return-to-primary checklist</a>.</p></div>'
-             '<div style="flex:.8;background:var(--s800);border-radius:12px;padding:10px 16px;color:#fff;display:flex;flex-direction:column;justify-content:center"><p style="font-size:11.4px;line-height:1.4;color:#fff">Managed HSM and EKM do not hold secrets or certificates. Use Standard or Premium vaults for both.</p></div></div>')
+    guide = ('<div class="eyebrow mt8" style="color:var(--s600)"><a href="https://azure.github.io/multi-region-platform/key-vault-across-regions.html#failover-guidance">Failover Guidance</a></div>'
+             '<div class="row" style="gap:20px;align-items:stretch;margin-top:5px"><div class="note" style="flex:1;padding:8px 14px"><h4>Standard/Premium failover</h4>'
+             '<p class="small" style="color:var(--ink);font-size:10.8px">You cannot trigger this best-effort failover. Initiation can take hours or longer, independently of other services; recent changes can be lost. Once initiated, public routing is designed to take a few minutes; private endpoints can add up to 20 minutes. Routing timings are not total outage duration.</p></div>'
+             '<div class="note" style="flex:1;padding:8px 14px"><h4>Customer-managed failover</h4>'
+             '<p class="small" style="color:var(--ink);font-size:10.8px">Pre-provision independent regional vaults, identities, connectivity, and versions; the application must select the healthy vault. Test recovery and return to primary. Backups restore only within the same subscription and Azure geography. Roll changes out sequentially; keep secrets out of IaC. Managed HSM and EKM cannot store secrets or certificates.</p></div></div>')
     body = (head("Service guides · Key Vault · Secrets and certificates", "Secrets and certificates: two patterns",
                  "Secrets and certificates can be loaded into any vault by a pipeline. That makes a vault in each region practical.")
             + f'<div class="kv-grid2 mt12">{c1}{c2}</div>' + guide)
@@ -349,7 +352,9 @@ def page4():
     body = (head("Service guides · Key Vault · Keys (2 of 2)", "Keys: Managed HSM patterns",
                  "Keys - Patterns 4-6 use Managed HSM. Replicate Azure-held keys, or keep physical key custody outside Microsoft. EKM does not support Secure Key Release.")
             + f'<div class="kv-grid3 mt12">{k4}{k5}{k6}</div>'
-            + '<p class="small muted mt8" style="font-size:10.2px">Enable Managed HSM multi-region replication to one extended region. Both regions are active and Azure Traffic Manager routes to the closest one; avoid caching DNS longer than the TTL. EKM adds network round trips to your proxy and HSM on every key operation. Managed HSM does not support backup and restore of external keys: recreate the external key reference.</p>')
+            + '<div class="note mt12" style="padding:9px 14px"><h4>Microsoft-managed failover: Managed HSM</h4>'
+              '<p class="small" style="color:var(--ink);font-size:10.8px"><b>With multiregion replication configured, reads and writes remain available if either region fails.</b> Any Managed HSM region can be primary; <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication#azure-region-support">extended-region support</a> varies. No pairing required. DNS selects the closest available region (5-second TTL); caching can delay failover. Key and role changes can take up to 6 minutes; cross-region consistency is not guaranteed during this window.</p>'
+              '<p class="small" style="color:var(--ink);font-size:10.8px">Microsoft-managed regional failover is unsupported without replication, with an unsupported extended region, or with external keys (EKM). EKM adds proxy/HSM network round trips; external-key backup and restore is unsupported. Recreate the key reference. See <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication">multiregion replication</a>, <a href="https://learn.microsoft.com/azure/reliability/reliability-managed-hsm">Managed HSM reliability</a>, and the <a href="https://azure.github.io/multi-region-platform/key-vault-across-regions.html#failover-guidance">failover scenario tables</a>.</p></div>')
     return page(body)
 
 

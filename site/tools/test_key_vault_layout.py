@@ -70,7 +70,8 @@ class KeyVaultLayoutTests(unittest.TestCase):
         store = []
         result = site_build.key_vault_pattern_layout(
             site_build.postprocess(site_build.expand_raw(site_build.render_md(body, store), store)))
-        self.assertLess(result.index('id="paired-and-nonpaired-regions"'), result.index("<table>"))
+        self.assertNotIn('id="paired-and-nonpaired-regions"', result)
+        self.assertLess(result.index('id="failover-guidance"'), result.index("<table>"))
         start = result.index('id="common-key-management-scenarios"')
         scenarios = result[start:].split('<h2 id="decision-tree">')[0]
         self.assertNotIn("<table>", scenarios)
@@ -90,11 +91,13 @@ class KeyVaultLayoutTests(unittest.TestCase):
             self.assertEqual(label, title)
         headers = re.findall(r"<thead>(.*?)</thead>", result, re.S)
         self.assertTrue(all(not re.search(r">Pattern \d", header) for header in headers))
-        self.assertIn('>Standard or Premium vault with paired-region replication</a>', headers[2])
+        keys_header = next(header for header in headers if 'href="#keys-pattern-1"' in header)
+        secrets_header = next(header for header in headers if 'href="#secrets-certificates-pattern-1"' in header)
+        self.assertIn('>Standard or Premium vault with paired-region replication</a>', keys_header)
         self.assertIn('class="table-wrap kv-table kv-wide"', result)
-        self.assertEqual(headers[2].count('<th scope="col">'), 7)
-        self.assertIn('>Standard or Premium vault in each region</a>', headers[1])
-        self.assertIn('>Standard or Premium vault in a paired region</a>', headers[1])
+        self.assertEqual(keys_header.count('<th scope="col">'), 7)
+        self.assertIn('>Standard or Premium vault in each region</a>', secrets_header)
+        self.assertIn('>Standard or Premium vault in a paired region</a>', secrets_header)
         for title in ("Standard or Premium vault in each region", "Standard or Premium vault in a paired region"):
             self.assertIn(title, keyvault.page2())
             self.assertIn(title, (ROOT / "decks" / "full" / "key-vault.js").read_text(encoding="utf-8"))
@@ -108,14 +111,82 @@ class KeyVaultLayoutTests(unittest.TestCase):
 
     def test_failover_guidance_is_explicit(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
-        guidance = body.split("### Failover guidance", 1)[1].split("## Choose the product", 1)[0]
+        guidance = body.split("## Failover Guidance", 1)[1].split("## Choose the product", 1)[0]
+        microsoft, customer = guidance.split("### Customer-managed failover", 1)
+        microsoft = microsoft.split("### Microsoft-managed failover for Azure Key Vault Standard or Premium", 1)[1]
+        microsoft = microsoft.split("### Microsoft-managed failover for Azure Key Vault Managed HSM", 1)[0]
+        self.assertTrue(microsoft.strip().startswith("Keep using the same vault URI;"))
+        important = microsoft.split("> [!IMPORTANT]\n", 1)[1].split("\n\n", 1)[0]
+        self.assertEqual(important.count("> - "), 2)
+        for condition in ("best effort", "total outage duration", "additional 20 minutes",
+                          "dual KEK (key encryption key)", "do not need to be in the same region",
+                          "consuming-service-specific requirements"):
+            self.assertIn(condition, important)
+        self.assertLess(microsoft.index("> [!IMPORTANT]"), microsoft.index("| Scenario |"))
+        table = microsoft.split("| Scenario |", 1)[1].split("\n\n", 1)[0]
+        self.assertNotIn("| Service |", microsoft)
+        self.assertIn("| Reciprocally paired regions within the same geography | Supported |", table)
+        exclusions = "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region"
+        for scenario in ("Paired regions in different geographies",
+                         "Nonreciprocal (asymmetric) region pairing", "Regions without a pair"):
+            self.assertIn(f"| {scenario} | [Unsupported]({exclusions}) |", table)
+        self.assertEqual(table.count("https://learn.microsoft.com/azure/reliability/regions-list"), 2)
+        for removed in ("**Read-only does not mean cryptography stops:**",
+                        "**Application readiness:**"):
+            self.assertNotIn(removed, microsoft)
+        self.assertIn("**Customer-controlled recovery:**", customer)
+        self.assertNotIn("**Customer-controlled recovery:**", microsoft)
         for condition in ("same vault URI", "cannot trigger", "hours or longer",
-                          "recent changes can be lost", "sign, verify", "firewall settings",
-                          "exponential backoff", "20 minutes", "return to the primary",
+                          "recent changes can be lost", "return to the primary",
                           "same subscription and Azure geography"):
             with self.subTest(condition=condition):
                 self.assertIn(condition, guidance)
         self.assertIn("#failover-guidance", keyvault.page2())
+        for heading in ("Standard/Premium failover", "Customer-managed failover"):
+            self.assertIn(f"<h4>{heading}</h4>", keyvault.page2())
+
+    def test_pdf_failover_summaries_cover_regional_conditions(self):
+        self.assertIn("dual KEK", keyvault.page1())
+        self.assertIn("consuming-service-specific requirements", keyvault.page1())
+        for condition in ("Microsoft-managed failover: Managed HSM", "reads and writes remain available",
+                          "No pairing required", "5-second TTL", "up to 6 minutes",
+                          "unsupported without replication", "unsupported extended region", "external keys (EKM)"):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, keyvault.page4())
+
+    def test_managed_hsm_failover_guidance(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        managed_hsm = body.split("### Microsoft-managed failover for Azure Key Vault Managed HSM\n", 1)[1]
+        managed_hsm = managed_hsm.split("### Customer-managed failover", 1)[0]
+        for removed in ("Failover occurs when one of the regions", "#### Failover behavior",
+                        "| Affected Region | Reads Allowed | Writes Allowed |",
+                        "**Read operations**", "**Write operations**",
+                        "#### Request routing", "#### Replication latency",
+                        "When you configure this feature:", "Both regions are active and can serve requests.",
+                        "Key material, roles, and permissions automatically replicate between regions.",
+                        "Azure Traffic Manager routes requests to the closest available region.",
+                        "The combined SLA increases to 99.99%."):
+            self.assertNotIn(removed, managed_hsm)
+        self.assertIn("> **If a primary or extended region goes down, you can still perform both read and write operations.**", managed_hsm)
+        for condition in ("closest available region",
+                          "Any Managed HSM region can be primary",
+                          "No pairing required", "External keys (EKM)",
+                          "read and write requests",
+                          "| Single-region deployment without multiregion replication | Unsupported |"):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, managed_hsm)
+        self.assertIn("> [!IMPORTANT]", managed_hsm)
+        self.assertIn("| Scenario | Microsoft-managed failover | What to verify |", managed_hsm)
+        self.assertIn("| Managed HSM with External Key Management (EKM) | Unsupported |", managed_hsm)
+        self.assertIn("isn't supported with external keys, so there is no geo-replicated failover target.", managed_hsm)
+        important = managed_hsm.split("> [!IMPORTANT]\n", 1)[1].split("\n\n", 1)[0]
+        for condition in ("**Routing:**", "5-second TTL",
+                          "**Replication:**", "up to 6 minutes",
+                          "cross-region consistency isn't guaranteed",
+                          "[Managed HSM multiregion replication](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication)"):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, important)
+        self.assertIn("https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication#azure-region-support", managed_hsm)
 
     def test_failover_exclusions_are_evergreen_across_formats(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
@@ -126,7 +197,6 @@ class KeyVaultLayoutTests(unittest.TestCase):
             "https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region",
             "https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds",
         )
-        self.assertIn(f"> [!IMPORTANT]\n> *{callout}*", body)
         self.assertIn(f"<em>{callout}</em>", keyvault.page1())
         for source in (body, keyvault.page1(), keyvault.page5(), deck):
             with self.subTest(source=source[:60]):
@@ -170,7 +240,8 @@ class KeyVaultLayoutTests(unittest.TestCase):
                 "historical key availability", "external-key backup/restore is not supported",
                 "authorize the restored service"),
             "Purview Information Protection": (
-                "preserve keys for old content", "dedicated Premium vault",
+                "preserve keys for old content", "BYOK with a Premium vault",
+                "supported HSMs and key-transfer instructions",
                 "feature-specific confirmation", "external-key operations",
                 "not applicable", "Microsoft 365 Customer Key"),
         }
@@ -214,7 +285,8 @@ class KeyVaultLayoutTests(unittest.TestCase):
             self.assertIn(phrase, pattern)
         purview = body.split("### Purview Information Protection", 1)[1].split("## Decision tree", 1)[0]
         self.assertIn("(#keys-pattern-1), using Premium", purview)
-        self.assertIn("Standard software-protected keys require feature-specific confirmation", purview)
+        self.assertNotIn("Standard software-protected keys require feature-specific confirmation", purview)
+        self.assertIn("BYOK with a Premium vault", purview)
         suitable, conditional = purview.split("**External key management requires feature-specific confirmation:**", 1)
         for pattern in (4, 5):
             self.assertIn(f"(#keys-pattern-{pattern})", suitable)
@@ -236,7 +308,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         combined = "".join(pages)
         for fid in keyvault.FIGNAMES:
             self.assertEqual(combined.count(f'id="{fid}"'), 1)
-        self.assertLess(pages[0].index("Paired regions"), pages[0].index('id="figKVTiers"'))
+        self.assertLess(pages[0].index("Standard/Premium failover"), pages[0].index('id="figKVTiers"'))
         self.assertNotIn("<table", pages[0])
         self.assertEqual(len(re.findall(r'href="[^"]+#(?:application-level-encryption|azure-storage-grs|storage-object-replication|vm-disk-encryption|azure-site-recovery|postgresql-and-mysql-flexible-server|database-geo-replication|database-geo-restore|purview-information-protection)"', pages[0])), 9)
 

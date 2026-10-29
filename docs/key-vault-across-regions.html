@@ -102,7 +102,7 @@
   <main id="main">
     <div class="crumbs">Multi-region platform <span>/</span> Service Guides for Multi Region</div>
     <h1 class="title">Key Vault across regions</h1>
-    <p class="meta">October 29, 2026 · 20 min read</p>
+    <p class="meta">October 29, 2026 · 21 min read</p>
     <article class="prose">
 <p>Key Vault is often a runtime dependency: an application can need keys, secrets, and certificates just to start. Recovering data in another region is not enough if its key cannot be reached. Start with regional behavior, compare the products and patterns, then check the consuming service's requirements.</p>
 <p><strong>Secrets and Certificates management patterns</strong></p>
@@ -119,27 +119,85 @@
 <li><a href="#keys-pattern-5">Pattern 5: Managed HSM geo-replication with external HSM and BYOK</a></li>
 <li><a href="#keys-pattern-6">Pattern 6: Managed HSM with external key management</a></li>
 </ul>
-<h2 id="paired-and-nonpaired-regions">Paired and nonpaired regions<a class="anchor" href="#paired-and-nonpaired-regions" aria-label="Link to this section">#</a></h2>
-<p><strong>Paired regions.</strong> In eligible same-geography region pairs, Key Vault Standard and Premium replicate vault contents asynchronously to a Microsoft-managed secondary. That copy is part of the same vault, not a second vault you manage. Microsoft decides when to fail over; afterward, secrets, certificates, and keys are available read-only until normal operation returns.</p>
-<p><strong>Nonpaired regions.</strong> Do not assume a Microsoft-managed secondary exists. Use independent regional vaults when the consuming service supports them, or configure Managed HSM multi-region replication for keys. Managed HSM can extend to one supported additional region; it is not restricted to region pairs.</p>
-<div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><p><em>Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.</em></p>
-<p>See <a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region" target="_blank" rel="noopener">Microsoft-managed failover to a paired region</a> for Key Vault regional failover eligibility, <a href="https://learn.microsoft.com/azure/reliability/reliability-managed-hsm" target="_blank" rel="noopener">Reliability in Azure Key Vault Managed HSM</a> for Managed HSM regional resiliency and replication, and <a href="https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds" target="_blank" rel="noopener">Azure Key Vault security worlds</a> for HSM cryptographic boundaries and backup/restore geography requirements.</p></div>
-<p>When you plan a multi-region architecture on Azure, check how your target regions are paired. Pairing affects disaster recovery options, data replication and data residency.</p>
-<p><strong>1. Regions without a pair</strong></p>
-<p>In a region without a pair, choose a secondary region yourself and configure cross-region recovery for each service. Availability zones, where supported, provide resiliency within a region, not across regions.</p>
-<p><strong>2. Pairings that only go one way (asymmetric pairing)</strong></p>
-<p>A pairing isn't always reciprocal: a region's designated pair might not point back to it. Do not infer Microsoft-managed Key Vault failover support from a one-way pairing. Before you rely on built-in geo-replication, check each service's documentation for regional eligibility.</p>
-<p><strong>3. Pairs in different geographies</strong></p>
-<p>Some pairs cross geographic boundaries. A regional pair doesn't on its own keep your data within a particular country or <a href="https://learn.microsoft.com/azure/reliability/regions-list?tabs=all" target="_blank" rel="noopener">geography</a>, and it doesn't guarantee that every service replicates to the paired region. Key Vault is one example. Check data residency and service-level replication separately against your compliance requirements.</p>
-<p>Microsoft-managed failover is best effort, not a customer-triggered recovery mechanism or a guaranteed application recovery time. Once initiated, public endpoint convergence is designed to take a few minutes; private endpoints can require up to an additional 20 minutes. Do not treat those routing timings as the total outage duration.</p>
-<h3 id="failover-guidance">Failover guidance<a class="anchor" href="#failover-guidance" aria-label="Link to this section">#</a></h3>
+<h2 id="failover-guidance">Failover Guidance<a class="anchor" href="#failover-guidance" aria-label="Link to this section">#</a></h2>
+<h3 id="microsoft-managed-failover-for-azure-key-vault-standard-or-premium">Microsoft-managed failover for Azure Key Vault Standard or Premium<a class="anchor" href="#microsoft-managed-failover-for-azure-key-vault-standard-or-premium" aria-label="Link to this section">#</a></h3>
+<p>Keep using the same vault URI; Microsoft reroutes requests after failover. You cannot trigger this failover. Initiation can take hours or longer, independently of other services. Asynchronous replication means recent changes can be lost.</p>
+<div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><ul>
+<li>Microsoft-managed failover is best effort, not a customer-triggered recovery mechanism or a guaranteed application recovery time. Once initiated, public endpoint convergence is designed to take a few minutes; private endpoints can require up to an additional 20 minutes. Do not treat those routing timings as the total outage duration.</li>
+<li>When using Key Vault in paired regions (for certificates, secrets, and dual KEK (key encryption key) scenarios), Key Vault replica instances do not need to be in the same region as the consuming services. Confirm any consuming-service-specific requirements for vault and key placement.</li>
+</ul></div>
+<div class="table-wrap kv-table" tabindex="0" role="region" aria-label="Key Vault comparison"><table>
+<thead>
+<tr>
+<th scope="col">Scenario</th>
+<th scope="col">Microsoft-managed failover</th>
+<th scope="col">What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">Reciprocally paired regions within the same geography</th>
+<td>Supported</td>
+<td>Use the <a href="https://learn.microsoft.com/azure/reliability/regions-list" target="_blank" rel="noopener">Azure regions list</a> to confirm that the primary and paired regions are within the same geography and paired with each other.</td>
+</tr>
+<tr><th scope="row">Paired regions in different geographies</th>
+<td><a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region" target="_blank" rel="noopener">Unsupported</a></td>
+<td>Use the <a href="https://learn.microsoft.com/azure/reliability/regions-list" target="_blank" rel="noopener">Azure regions list</a> to compare the geography of the primary and paired regions. A pairing across geographies does not qualify.</td>
+</tr>
+<tr><th scope="row">Nonreciprocal (asymmetric) region pairing</th>
+<td><a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region" target="_blank" rel="noopener">Unsupported</a></td>
+<td>Region A is paired with Region B, but Region B is paired with another region or has no pair. A one-way pairing does not qualify.</td>
+</tr>
+<tr><th scope="row">Regions without a pair</th>
+<td><a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region" target="_blank" rel="noopener">Unsupported</a></td>
+<td>The primary region has no paired region for Microsoft-managed failover.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="microsoft-managed-failover-for-azure-key-vault-managed-hsm">Microsoft-managed failover for Azure Key Vault Managed HSM<a class="anchor" href="#microsoft-managed-failover-for-azure-key-vault-managed-hsm" aria-label="Link to this section">#</a></h3>
+<p>Managed HSM resources are deployed into a single Azure region. If the region becomes unavailable, your Managed HSM is also unavailable. Managed HSM supports <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication" target="_blank" rel="noopener">multiregion replication</a>, which you can use to extend a Managed HSM pool from one Azure region (the <em>primary region</em>) to a second Azure region (the <em>extended region</em>).</p>
+<p>For reliability details, see <a href="https://learn.microsoft.com/azure/reliability/reliability-managed-hsm" target="_blank" rel="noopener">Reliability in Azure Key Vault Managed HSM</a>.</p>
+<div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><p><strong>If a primary or extended region goes down, you can still perform both read and write operations.</strong></p>
 <ul>
-<li><strong>Microsoft-managed recovery:</strong> Keep using the same vault URI; Microsoft reroutes requests after failover. You cannot trigger this failover. Initiation can take hours or longer, independently of other services. Asynchronous replication means recent changes can be lost.</li>
-<li><strong>Read-only does not mean cryptography stops:</strong> After failover, supported actions include listing and getting keys, secrets, and certificates; encrypt, decrypt, wrap, unwrap, sign, verify; and backup. Creating, updating, renewing, rotating, or deleting objects is unavailable. Access policies, firewall settings, and vault properties cannot be changed.</li>
-<li><strong>Application readiness:</strong> Use SDK retries with exponential backoff and respect DNS TTL. Validate private connectivity from the recovery region; Private Link reconnection can add 20 minutes after failover. Monitor Service Health and Resource Health.</li>
+<li><strong>Regions:</strong> Any Managed HSM region can be primary; <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication#azure-region-support" target="_blank" rel="noopener">extended-region support</a> varies. No pairing required.</li>
+<li><strong>Routing:</strong> DNS selects the closest available region (5-second TTL); caching can delay failover.</li>
+<li><strong>Replication:</strong> Key and role changes can take up to 6 minutes; cross-region consistency isn't guaranteed during this window. External keys (EKM) aren't supported by multiregion replication.</li>
+</ul>
+<p>See <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication" target="_blank" rel="noopener">Managed HSM multiregion replication</a> for more details.</p></div>
+<div class="table-wrap kv-table" tabindex="0" role="region" aria-label="Key Vault comparison"><table>
+<thead>
+<tr>
+<th scope="col">Scenario</th>
+<th scope="col">Microsoft-managed failover</th>
+<th scope="col">What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">Primary region unavailable with multiregion replication configured</th>
+<td>Supported</td>
+<td>The healthy extended region continues serving read and write requests. Configure replication to a <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication#azure-region-support" target="_blank" rel="noopener">supported extended region</a> before an outage; region pairing isn't required.</td>
+</tr>
+<tr><th scope="row">Extended region unavailable with multiregion replication configured</th>
+<td>Supported</td>
+<td>The healthy primary region continues serving read and write requests.</td>
+</tr>
+<tr><th scope="row">Single-region deployment without multiregion replication</th>
+<td>Unsupported</td>
+<td>If the region becomes unavailable, the Managed HSM is also unavailable.</td>
+</tr>
+<tr><th scope="row">Unsupported extended region</th>
+<td>Unsupported</td>
+<td>Check <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication#azure-region-support" target="_blank" rel="noopener">Azure region support</a> before selecting the extended region.</td>
+</tr>
+<tr><th scope="row">Managed HSM with External Key Management (EKM)</th>
+<td>Unsupported</td>
+<td><a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication" target="_blank" rel="noopener">Multiregion replication</a> isn't supported with external keys, so there is no geo-replicated failover target.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="customer-managed-failover">Customer-managed failover<a class="anchor" href="#customer-managed-failover" aria-label="Link to this section">#</a></h3>
+<ul>
 <li><strong>Customer-controlled recovery:</strong> Pre-provision independent regional vaults, identities, permissions, networking, and required object versions. Your application selects the healthy vault; a second vault alone does not provide fallback. Test recovery and return to the primary before production. Key Vault backups are point-in-time and restore only within the same subscription and Azure geography.</li>
 </ul>
-<p>These are Standard/Premium vault behaviors. Replicated Managed HSM serves both regions; external keys have no geo-replicated failover target. See the <a href="https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region" target="_blank" rel="noopener">official failover guidance</a> and the <a href="#keys">key patterns</a>.</p>
 <h2 id="choose-the-product">Choose the product<a class="anchor" href="#choose-the-product" aria-label="Link to this section">#</a></h2>
 <p>Key Vault is multi-tenant; Managed HSM is single-tenant. Keep the product choice separate from the regional deployment choice.</p>
 <div class="table-wrap kv-table" tabindex="0" role="region" aria-label="Key Vault comparison"><table>
@@ -440,7 +498,7 @@
   <aside class="rail" aria-label="In this article">
     <div class="rail-in">
       <p class="rail-h">In this article</p>
-      <ul><li><a href="#paired-and-nonpaired-regions">Paired and nonpaired regions</a></li><li><a href="#choose-the-product">Choose the product</a></li><li><a href="#secrets-and-certificates">Secrets and certificates</a></li><li><a href="#keys">Keys</a></li><li><a href="#common-key-management-scenarios">Common key-management scenarios</a></li><li><a href="#decision-tree">Decision tree</a></li><li><a href="#reference-links">Reference links</a></li></ul>
+      <ul><li><a href="#failover-guidance">Failover Guidance</a></li><li><a href="#choose-the-product">Choose the product</a></li><li><a href="#secrets-and-certificates">Secrets and certificates</a></li><li><a href="#keys">Keys</a></li><li><a href="#common-key-management-scenarios">Common key-management scenarios</a></li><li><a href="#decision-tree">Decision tree</a></li><li><a href="#reference-links">Reference links</a></li></ul>
     </div>
   </aside>
 </div>

@@ -13,7 +13,7 @@ module.exports = (pres, L) => {
   {
     const s = L.slide('services');
     L.header(s, '', 'Key Vault: regional behavior, then product', { eyebrow: 'Service guides · Key Vault', tw: 11.8 });
-    L.txt(s, 'Paired: eligible vaults use Microsoft-managed recovery; initiation can take hours or longer. Nonpaired: design regional recovery explicitly.', 0.6, 1.42, 12.13, 0.45, { fontSize: 12, color: C.ink });
+    L.txt(s, 'Standard/Premium: keep the vault URI; Microsoft reroutes requests. Best-effort failover can take hours or longer, independently of other services.', 0.6, 1.42, 12.13, 0.45, { fontSize: 12, color: C.ink });
     const rows = [
       ['Product', 'Protection and contents', 'Regional behavior', 'SLA'],
       ['Key Vault Standard', 'Multi-tenant; software, FIPS 140 Level 1. Asymmetric keys, secrets, certificates.', 'Automatic zones in zone regions; same-geography paired replication where supported; Microsoft failover, read-only afterward.', '99.99%'],
@@ -25,12 +25,12 @@ module.exports = (pres, L) => {
       x: 0.6, y: 2.0, w: 12.13, colW: [2, 3.7, 4.33, 2.1], rowH: [0.38, 0.84, 0.94, 0.84, 0.84],
       fontFace: F.body, fontSize: 11, color: C.text, margin: 0.1, border: { type: 'solid', pt: 0.75, color: C.soft }, autoPage: false,
     });
-    L.txt(s, 'Once initiated, endpoint convergence takes minutes; Private Link can add 20 minutes. Read-only afterward. These are not total recovery times.', 0.6, 6.05, 12.13, 0.3, { fontSize: 11, color: C.ink });
+    L.txt(s, 'Once initiated, public routing is designed to take minutes; private endpoints can add 20 more. These are not total outage durations.', 0.6, 6.05, 12.13, 0.3, { fontSize: 11, color: C.ink });
     L.box(s, 0.6, 6.4, 12.13, 0.5, { fill: C.b50 });
     L.txt(s, 'Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.', 0.75, 6.46, 11.83, 0.35, { fontSize: 11, italic: true, color: C.ink });
     s.addNotes('Microsoft-managed failover is best effort. Initiation can take hours or longer after the outage; endpoint convergence is not the application RTO. Key Vault can be a runtime dependency even when data is recoverable. Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies. Use independent vaults or supported Managed HSM replication. Regional eligibility: https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region . HSM cryptographic boundaries and backup/restore geography requirements: https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds . ' + reference);
     s.addNotes('Managed HSM regional resiliency and replication: https://learn.microsoft.com/azure/reliability/reliability-managed-hsm');
-    s.addNotes(article.split('### Failover guidance\n')[1].split('\n## Choose the product')[0] + '\n' + reference + '#failover-guidance');
+    s.addNotes(article.split('## Failover Guidance\n')[1].split('\n## Choose the product')[0] + '\n' + reference + '#failover-guidance');
   }
 
   const groups = [
@@ -79,7 +79,7 @@ module.exports = (pres, L) => {
     },
     {
       title: 'Keys: Managed HSM patterns',
-      guidance: 'Enable replication; respect DNS TTL for Traffic Manager routing. EKM adds proxy/HSM round trips; recreate external key references, not backups.',
+      guidance: 'Replication required; extended-region support varies, with no pairing requirement. DNS TTL: 5 seconds; caching can delay failover. EKM failover is unsupported.',
       patterns: [
         ['4', 'Managed HSM geo-replication', 'keys-managed-hsm-geo',
           'Managed HSM; replicate to one extended region.',
@@ -117,7 +117,7 @@ module.exports = (pres, L) => {
     });
     L.txt(s, guidance, 0.6, 6.5, 12.13, 0.4, { fontSize: 11, color: C.muted });
     if (groupIndex === 3) {
-      s.addNotes('Managed HSM changes to keys, role definitions, and role assignments replicate asynchronously within 6 minutes. The last changes can be lost if the primary cannot be recovered. Both regions remain active. EKM recovery depends on Managed HSM, EKM proxy, customer HSM, or region; EKM does not support geo-replication. Managed HSM does not support backup and restore of external keys.');
+      s.addNotes('With multiregion replication configured, reads and writes remain available if either region fails. Any Managed HSM region can be primary; extended-region support varies and does not depend on region pairings. DNS routes to the closest available region with a 5-second TTL; client caching can delay failover. Key, role definition, and role assignment changes can take up to 6 minutes to replicate; cross-region consistency is not guaranteed during this window. Microsoft-managed regional failover is unsupported without replication, with an unsupported extended region, or with external keys (EKM). EKM recovery depends on Managed HSM, EKM proxy, customer HSM, or region; Managed HSM does not support backup and restore of external keys. https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication');
     }
   });
   const scenarioSection = article.split('## Common key-management scenarios\n')[1].split('\n## Decision tree')[0];
