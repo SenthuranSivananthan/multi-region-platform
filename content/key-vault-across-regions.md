@@ -65,7 +65,17 @@ For reliability details, see [Reliability in Azure Key Vault Managed HSM](https:
 
 ### Customer-managed failover
 
-- **Customer-controlled recovery:** Pre-provision independent regional vaults, identities, permissions, networking, and required object versions. Your application selects the healthy vault; a second vault alone does not provide fallback. Test recovery and return to the primary before production. Key Vault backups are point-in-time and restore only within the same subscription and Azure geography.
+Consider customer-controlled failover design patterns when Microsoft-managed failover does not meet your application's recovery time objectives (RTOs). These patterns let you choose regions for your workloads, subject to product availability, supported extended regions, and consuming-service requirements.
+
+> [!IMPORTANT]
+> - Prepare identities, permissions, networking, and required versions in each region.
+> - For independent vaults, configure application fallback and test failover and return to the primary before production. A second vault alone is not enough.
+> - Key Vault backups are point-in-time and restore only within the same subscription and Azure geography.
+
+| Product | Regional deployment and recovery | Artifact provisioning |
+|---|---|---|
+| Key Vault Standard or Premium | Create a [vault in each workload region](#secrets-certificates-pattern-1); each surviving region retains local read and write access. | Populate certificates and secrets in each vault through an automation pipeline. If you manage an on-premises HSM, consider [BYOK into a Premium vault in each region](#keys-pattern-3) using HSM-generated keys. HSM-backed BYOK requires Premium, not Standard. |
+| Key Vault Managed HSM | Recommended: enable [geo-replication](#keys-pattern-4) to a supported extended region so both regions support reads and writes. Changes in either region replicate asynchronously to the other. Microsoft manages routing and failover. | Keys only. Generate keys in Managed HSM, or generate them in your on-premises HSM and [import them using BYOK](#keys-pattern-5). Imported keys then replicate to the extended region. |
 
 ## Choose the product
 

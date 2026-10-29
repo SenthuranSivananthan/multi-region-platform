@@ -134,8 +134,10 @@ class KeyVaultLayoutTests(unittest.TestCase):
         for removed in ("**Read-only does not mean cryptography stops:**",
                         "**Application readiness:**"):
             self.assertNotIn(removed, microsoft)
-        self.assertIn("**Customer-controlled recovery:**", customer)
-        self.assertNotIn("**Customer-controlled recovery:**", microsoft)
+        self.assertIn("> [!IMPORTANT]\n> - Prepare identities", customer)
+        self.assertNotIn("**Customer-controlled recovery:**", guidance)
+        important = customer.split("> [!IMPORTANT]\n", 1)[1].split("\n\n", 1)[0]
+        self.assertEqual(important.count("> - "), 3)
         for condition in ("same vault URI", "cannot trigger", "hours or longer",
                           "recent changes can be lost", "return to the primary",
                           "same subscription and Azure geography"):
@@ -145,11 +147,43 @@ class KeyVaultLayoutTests(unittest.TestCase):
         for heading in ("Standard/Premium failover", "Customer-managed failover"):
             self.assertIn(f"<h4>{heading}</h4>", keyvault.page2())
 
+    def test_customer_managed_failover_compares_product_patterns(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        store = []
+        result = site_build.postprocess(site_build.expand_raw(site_build.render_md(body, store), store))
+        customer = result.split('id="customer-managed-failover"', 1)[1].split('id="choose-the-product"', 1)[0]
+        self.assertIn("recovery time objectives (RTOs)", customer)
+        self.assertIn("choose regions for your workloads", customer)
+        self.assertLess(customer.index("Prepare identities"), customer.index("<table>"))
+        table = re.search(r"<table>.*?</table>", customer, re.S).group(0)
+        rows = re.findall(r"<tr>.*?</tr>", table, re.S)
+        self.assertEqual(len(rows), 3)
+        for condition in ("Key Vault Standard or Premium", 'href="#secrets-certificates-pattern-1"',
+                          "automation pipeline", "on-premises HSM", 'href="#keys-pattern-3"',
+                          "HSM-backed BYOK requires Premium, not Standard"):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, rows[1])
+        for condition in ("Key Vault Managed HSM", "Keys only", 'href="#keys-pattern-4"',
+                          "supported extended region", "both regions support reads and writes",
+                          "Changes in either region replicate asynchronously to the other",
+                          "Microsoft manages routing and failover", "on-premises HSM",
+                          'href="#keys-pattern-5"', "Imported keys then replicate"):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, rows[2])
+
     def test_pdf_failover_summaries_cover_regional_conditions(self):
         self.assertIn("dual KEK", keyvault.page1())
         self.assertIn("consuming-service-specific requirements", keyvault.page1())
+        for condition in ("recovery misses your RTO", "supported workload regions",
+                          "identities, permissions, networking, and versions",
+                          "tested application fallback", "second vault alone is not enough",
+                          "Point-in-time Key Vault backups"):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, keyvault.page2())
+        self.assertIn("With an on-premises HSM, consider BYOK into each Premium vault", keyvault.page3())
         for condition in ("Microsoft-managed failover: Managed HSM", "reads and writes remain available",
                           "No pairing required", "5-second TTL", "up to 6 minutes",
+                          "Changes in either region replicate asynchronously to the other",
                           "unsupported without replication", "unsupported extended region", "external keys (EKM)"):
             with self.subTest(condition=condition):
                 self.assertIn(condition, keyvault.page4())

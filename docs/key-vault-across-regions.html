@@ -102,7 +102,7 @@
   <main id="main">
     <div class="crumbs">Multi-region platform <span>/</span> Service Guides for Multi Region</div>
     <h1 class="title">Key Vault across regions</h1>
-    <p class="meta">October 29, 2026 · 21 min read</p>
+    <p class="meta">October 29, 2026 · 22 min read</p>
     <article class="prose">
 <p>Key Vault is often a runtime dependency: an application can need keys, secrets, and certificates just to start. Recovering data in another region is not enough if its key cannot be reached. Start with regional behavior, compare the products and patterns, then check the consuming service's requirements.</p>
 <p><strong>Secrets and Certificates management patterns</strong></p>
@@ -195,9 +195,31 @@
 </tbody>
 </table></div>
 <h3 id="customer-managed-failover">Customer-managed failover<a class="anchor" href="#customer-managed-failover" aria-label="Link to this section">#</a></h3>
-<ul>
-<li><strong>Customer-controlled recovery:</strong> Pre-provision independent regional vaults, identities, permissions, networking, and required object versions. Your application selects the healthy vault; a second vault alone does not provide fallback. Test recovery and return to the primary before production. Key Vault backups are point-in-time and restore only within the same subscription and Azure geography.</li>
-</ul>
+<p>Consider customer-controlled failover design patterns when Microsoft-managed failover does not meet your application's recovery time objectives (RTOs). These patterns let you choose regions for your workloads, subject to product availability, supported extended regions, and consuming-service requirements.</p>
+<div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><ul>
+<li>Prepare identities, permissions, networking, and required versions in each region.</li>
+<li>For independent vaults, configure application fallback and test failover and return to the primary before production. A second vault alone is not enough.</li>
+<li>Key Vault backups are point-in-time and restore only within the same subscription and Azure geography.</li>
+</ul></div>
+<div class="table-wrap kv-table" tabindex="0" role="region" aria-label="Key Vault comparison"><table>
+<thead>
+<tr>
+<th scope="col">Product</th>
+<th scope="col">Regional deployment and recovery</th>
+<th scope="col">Artifact provisioning</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">Key Vault Standard or Premium</th>
+<td>Create a <a href="#secrets-certificates-pattern-1">vault in each workload region</a>; each surviving region retains local read and write access.</td>
+<td>Populate certificates and secrets in each vault through an automation pipeline. If you manage an on-premises HSM, consider <a href="#keys-pattern-3">BYOK into a Premium vault in each region</a> using HSM-generated keys. HSM-backed BYOK requires Premium, not Standard.</td>
+</tr>
+<tr><th scope="row">Key Vault Managed HSM</th>
+<td>Recommended: enable <a href="#keys-pattern-4">geo-replication</a> to a supported extended region so both regions support reads and writes. Changes in either region replicate asynchronously to the other. Microsoft manages routing and failover.</td>
+<td>Keys only. Generate keys in Managed HSM, or generate them in your on-premises HSM and <a href="#keys-pattern-5">import them using BYOK</a>. Imported keys then replicate to the extended region.</td>
+</tr>
+</tbody>
+</table></div>
 <h2 id="choose-the-product">Choose the product<a class="anchor" href="#choose-the-product" aria-label="Link to this section">#</a></h2>
 <p>Key Vault is multi-tenant; Managed HSM is single-tenant. Keep the product choice separate from the regional deployment choice.</p>
 <div class="table-wrap kv-table" tabindex="0" role="region" aria-label="Key Vault comparison"><table>
