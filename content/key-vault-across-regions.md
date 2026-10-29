@@ -102,19 +102,24 @@ Use one of these shared-key patterns for the scenarios below, subject to each se
 
 ### Application-level encryption {#application-level-encryption-single-kek}
 
-Your application is limited to using a single key encryption key across all regions.
+- Your application has constraints or requirements to use a single key encryption key, regardless of how many regions the application is deployed in.
 
 ### Azure Storage - Geo-redundant storage (GRS) {#azure-storage-grs}
 
-GRS copies are replicas of one storage account, not independently configured accounts. Both depend on that account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See [Storage CMKs](https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview).
+- When you configure customer-managed keys for a storage account, Azure Storage wraps the root data encryption key for the account with the customer-managed key in the associated key vault or managed HSM. The protection of the root encryption key changes, but the data in your Azure Storage account remains encrypted at all times. You don't need to take any additional action to ensure that your data remains encrypted. Protection by customer-managed keys takes effect immediately.
+- GRS copies are replicas of one storage account, not independently configured accounts. Both primary and secondary storage account replicas need access to the same Key Vault or Managed HSM and the account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See [Storage CMKs](https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview).
 
 ### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication {#database-geo-replication}
 
-SQL Database and SQL Managed Instance need the required TDE protector keys available to their replicas. See [SQL customer-managed TDE](https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview) and [Cosmos DB CMKs](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys).
+- Database replicas need access to the same Azure Key Vault as the primary. When replicating across countries, pair replication with online key rotation. Online key rotation requires both primary and secondary database instances to be online and their Azure Key Vault instances to be accessible, making it unsuitable as a disaster recovery solution.
+- These customer-managed key access and rotation concerns do not apply when replicating databases using Microsoft-managed keys (MMK).
+- Azure Key Vault Managed HSM is the preferred solution in these cases, where supported by the consuming database service. Customers can geo-replicate their single-tenant Azure Key Vault Managed HSM to a supported region of choice, and failover preserves the Azure Key Vault Managed HSM endpoint's fully qualified domain name (FQDN).
+
+See [SQL customer-managed TDE](https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview) and [Cosmos DB CMKs](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys).
 
 ### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore {#database-geo-restore}
 
-Restoring data does not restore access to its encryption keys. Retain all historical keys required by the backup, authorize the restored service, and verify the target region/geography against that service's restore rules.
+- Restoring data does not restore access to its encryption keys. Retain all historical keys required by the backup, authorize the restored service, and verify the target region/geography against that service's restore rules.
 
 > [!IMPORTANT]
 > Geo-restore is not possible for Microsoft-managed key (MMK) or Customer-managed key (CMK) scenarios when using paired regions in different geographies.

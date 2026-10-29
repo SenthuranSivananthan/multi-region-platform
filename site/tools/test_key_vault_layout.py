@@ -170,6 +170,29 @@ class KeyVaultLayoutTests(unittest.TestCase):
                           "recovery region", "if its primary region is unavailable"):
             self.assertIn(condition, scenario)
 
+    def test_database_geo_replication_description_explains_key_access_and_rotation(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        description = body.split(
+            "### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication {#database-geo-replication}\n",
+            1)[1].split("\n### ", 1)[0]
+        self.assertEqual(len(re.findall(r"^- ", description, re.M)), 3)
+        for condition in ("same Azure Key Vault as the primary",
+                          "When replicating across countries",
+                          "online key rotation",
+                          "both primary and secondary database instances to be online",
+                          "Azure Key Vault instances to be accessible",
+                          "unsuitable as a disaster recovery solution",
+                          "concerns do not apply",
+                          "Microsoft-managed keys (MMK)",
+                          "Azure Key Vault Managed HSM is the preferred solution",
+                          "where supported by the consuming database service",
+                          "supported region of choice",
+                          "single-tenant Azure Key Vault Managed HSM",
+                          "failover preserves the Azure Key Vault Managed HSM endpoint's fully qualified domain name (FQDN)",
+                          "[SQL customer-managed TDE]",
+                          "[Cosmos DB CMKs]"):
+            self.assertIn(condition, description)
+
     def test_single_kek_description_explains_shared_key_and_recovery(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         description = body.split("## Single KEK (key encryption key) scenarios\n", 1)[1].split("\n### ", 1)[0]
@@ -253,10 +276,10 @@ class KeyVaultLayoutTests(unittest.TestCase):
             self.assertEqual(patterns.count(f'data-fig="{figure}"'), 1)
         single_application = re.search(r'<h3 id="application-level-encryption-single-kek">.*?(?=<h3|\Z)', single, re.S).group(0)
         dual_application = re.search(r'<h3 id="application-level-encryption">.*?(?=<h3|\Z)', dual, re.S).group(0)
-        self.assertIn("<p>Your application is limited to using a single key encryption key across all regions.</p>", single_application)
+        self.assertIn("<li>Your application has constraints or requirements to use a single key encryption key, regardless of how many regions the application is deployed in.</li>", single_application)
         self.assertNotIn("Your application decides whether", single_application)
         self.assertIn("Your application decides whether each region uses an independent key or a common key.", dual_application)
-        self.assertNotIn("<li>", single_application)
+        self.assertEqual(single_application.count("<li>"), 1)
         self.assertNotRegex(dual_application, r'href="#keys-pattern-[1-6]"')
         self.assertNotIn('href="#keys-pattern-6"', dual_application)
         self.assertNotIn('href="#keys-pattern-1"', dual_application)
@@ -267,6 +290,13 @@ class KeyVaultLayoutTests(unittest.TestCase):
             self.assertIn(f'<h3 id="{anchor}">', single)
             self.assertNotIn(f'<h3 id="{anchor}">', dual)
             self.assertEqual(result.count(f'<h3 id="{anchor}">'), 1)
+        storage_grs = re.search(r'<h3 id="azure-storage-grs">.*?(?=<h3|\Z)', single, re.S).group(0)
+        for description in ("Azure Storage wraps the root data encryption key",
+                            "remains encrypted at all times",
+                            "Protection by customer-managed keys takes effect immediately.",
+                            "Both primary and secondary storage account replicas need access to the same Key Vault or Managed HSM",
+                            "Independent regional vaults do not let you assign a different key store to each GRS replica."):
+            self.assertIn(description, storage_grs)
         dual_anchors = ("application-level-encryption", "storage-object-replication",
                         "postgresql-and-mysql-flexible-server", "vm-disk-encryption", "azure-site-recovery")
         self.assertEqual(re.findall(r'<h3 id="([^"]+)">', dual), list(dual_anchors))
@@ -279,10 +309,12 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertEqual(dual.count("<table>"), 1)
         sections = re.split(r"<h3\b", scenarios)[1:]
         self.assertEqual(len(sections), 10)
-        for section in sections:
+        for section in re.split(r"<h3\b", dual)[1:]:
             description = section.split("</h3>", 1)[1].split("<strong>Patterns you can use:</strong>", 1)[0]
             self.assertRegex(description, r"<p>(?!<strong>)")
         for section in re.split(r"<h3\b", single)[1:]:
+            description = section.split("</h3>", 1)[1].split('<div class="admonition', 1)[0]
+            self.assertRegex(description, r"^\s*<ul>\s*<li>")
             self.assertNotIn("<strong>Patterns you can use:</strong>", section)
             self.assertNotRegex(section, r'href="#keys-pattern-[1-6]"')
             self.assertNotIn("<figure", section)
@@ -583,7 +615,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
                 "key and identity", "validate key import",
                 "Managed HSM support", "geo-redundant backups"),
             "Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication": (
-                "TDE protector keys", "Cosmos DB"),
+                "same Azure Key Vault as the primary", "Cosmos DB"),
             "Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore": (
                 "Retain all historical keys", "authorize the restored service"),
             "Purview Information Protection": (
@@ -595,13 +627,13 @@ class KeyVaultLayoutTests(unittest.TestCase):
         geo_replication = sections["Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication"]
         self.assertNotIn("> [!IMPORTANT]", geo_replication)
         self.assertNotIn("**Patterns you can use:**", geo_replication)
-        self.assertEqual(re.findall(r"^- (.+)$", geo_replication, re.M), [])
+        self.assertEqual(len(re.findall(r"^- (.+)$", geo_replication, re.M)), 3)
         self.assertNotIn("(#keys-pattern-2)", geo_replication)
         self.assertNotIn("(#keys-pattern-3)", geo_replication)
         self.assertNotIn("(#keys-pattern-6)", geo_replication)
         geo_restore = sections["Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore"]
         self.assertNotIn("**Patterns you can use:**", geo_restore)
-        self.assertEqual(re.findall(r"^- (.+)$", geo_restore, re.M), [])
+        self.assertEqual(len(re.findall(r"^- (.+)$", geo_restore, re.M)), 1)
         self.assertNotIn("(#keys-pattern-2)", geo_restore)
         self.assertNotIn("(#keys-pattern-3)", geo_restore)
         self.assertNotIn("(#keys-pattern-6)", geo_restore)

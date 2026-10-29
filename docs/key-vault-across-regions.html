@@ -102,7 +102,7 @@
   <main id="main">
     <div class="crumbs">Multi-region platform <span>/</span> Service Guides for Multi Region</div>
     <h1 class="title">Key Vault across regions</h1>
-    <p class="meta">October 29, 2026 · 20 min read</p>
+    <p class="meta">October 29, 2026 · 21 min read</p>
     <article class="prose">
 <h2 id="tldr">TL;DR<a class="anchor" href="#tldr" aria-label="Link to this section">#</a></h2>
 <ul>
@@ -279,13 +279,25 @@
 </tbody>
 </table></div>
 <h3 id="application-level-encryption-single-kek">Application-level encryption<a class="anchor" href="#application-level-encryption-single-kek" aria-label="Link to this section">#</a></h3>
-<p>Your application is limited to using a single key encryption key across all regions.</p>
+<ul>
+<li>Your application has constraints or requirements to use a single key encryption key, regardless of how many regions the application is deployed in.</li>
+</ul>
 <h3 id="azure-storage-grs">Azure Storage - Geo-redundant storage (GRS)<a class="anchor" href="#azure-storage-grs" aria-label="Link to this section">#</a></h3>
-<p>GRS copies are replicas of one storage account, not independently configured accounts. Both depend on that account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See <a href="https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview" target="_blank" rel="noopener">Storage CMKs</a>.</p>
+<ul>
+<li>When you configure customer-managed keys for a storage account, Azure Storage wraps the root data encryption key for the account with the customer-managed key in the associated key vault or managed HSM. The protection of the root encryption key changes, but the data in your Azure Storage account remains encrypted at all times. You don't need to take any additional action to ensure that your data remains encrypted. Protection by customer-managed keys takes effect immediately.</li>
+<li>GRS copies are replicas of one storage account, not independently configured accounts. Both primary and secondary storage account replicas need access to the same Key Vault or Managed HSM and the account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See <a href="https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview" target="_blank" rel="noopener">Storage CMKs</a>.</li>
+</ul>
 <h3 id="database-geo-replication">Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication<a class="anchor" href="#database-geo-replication" aria-label="Link to this section">#</a></h3>
-<p>SQL Database and SQL Managed Instance need the required TDE protector keys available to their replicas. See <a href="https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview" target="_blank" rel="noopener">SQL customer-managed TDE</a> and <a href="https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys" target="_blank" rel="noopener">Cosmos DB CMKs</a>.</p>
+<ul>
+<li>Database replicas need access to the same Azure Key Vault as the primary. When replicating across countries, pair replication with online key rotation. Online key rotation requires both primary and secondary database instances to be online and their Azure Key Vault instances to be accessible, making it unsuitable as a disaster recovery solution.</li>
+<li>These customer-managed key access and rotation concerns do not apply when replicating databases using Microsoft-managed keys (MMK).</li>
+<li>Azure Key Vault Managed HSM is the preferred solution in these cases, where supported by the consuming database service. Customers can geo-replicate their single-tenant Azure Key Vault Managed HSM to a supported region of choice, and failover preserves the Azure Key Vault Managed HSM endpoint's fully qualified domain name (FQDN).</li>
+</ul>
+<p>See <a href="https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview" target="_blank" rel="noopener">SQL customer-managed TDE</a> and <a href="https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys" target="_blank" rel="noopener">Cosmos DB CMKs</a>.</p>
 <h3 id="database-geo-restore">Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore<a class="anchor" href="#database-geo-restore" aria-label="Link to this section">#</a></h3>
-<p>Restoring data does not restore access to its encryption keys. Retain all historical keys required by the backup, authorize the restored service, and verify the target region/geography against that service's restore rules.</p>
+<ul>
+<li>Restoring data does not restore access to its encryption keys. Retain all historical keys required by the backup, authorize the restored service, and verify the target region/geography against that service's restore rules.</li>
+</ul>
 <div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><p>Geo-restore is not possible for Microsoft-managed key (MMK) or Customer-managed key (CMK) scenarios when using paired regions in different geographies.</p></div>
 <h3 id="purview-information-protection">Purview Information Protection<a class="anchor" href="#purview-information-protection" aria-label="Link to this section">#</a></h3>
 <ul>
