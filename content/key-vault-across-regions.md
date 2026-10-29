@@ -139,7 +139,7 @@ A dual KEK design uses separate key encryption keys for the primary and recovery
 
 **Patterns you can use:**
 
-Use the following patterns subject to each service's requirements. For Azure Site Recovery, only the two regional-vault patterns apply.
+Use the following patterns subject to each service's requirements.
 
 | Pattern | Key origin | Recovery behavior | Diagram |
 |---|---|---|---|

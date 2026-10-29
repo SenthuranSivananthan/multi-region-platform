@@ -322,7 +322,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         shared_dual = dual.split("<h3", 1)[0]
         self.assertEqual(dual.count("<strong>Patterns you can use:</strong>"), 1)
         self.assertIn("<strong>Patterns you can use:</strong>", shared_dual)
-        self.assertIn("For Azure Site Recovery, only the two regional-vault patterns apply.", shared_dual)
+        self.assertNotIn("For Azure Site Recovery, only the two regional-vault patterns apply.", shared_dual)
         self.assertIn('class="table-wrap kv-table kv-illustrated"', shared_dual)
         self.assertEqual(re.findall(r'<th scope="col">(.*?)</th>', shared_dual),
                          ["Pattern", "Key origin", "Recovery behavior", "Diagram"])

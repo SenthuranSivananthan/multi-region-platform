@@ -309,7 +309,7 @@
 <h2 id="dual-kek-key-encryption-key-scenarios">Dual KEK (key encryption key) scenarios<a class="anchor" href="#dual-kek-key-encryption-key-scenarios" aria-label="Link to this section">#</a></h2>
 <p>A dual KEK design uses separate key encryption keys for the primary and recovery regions, rather than one shared KEK. Each KEK protects the data encryption keys (DEKs) used by its regional data copy. The consuming service must support independent regional keys and make the recovery data decryptable with the recovery region's key. Provision and test regional key access, and preserve the key material and versions required by existing data and backups.</p>
 <p><strong>Patterns you can use:</strong></p>
-<p>Use the following patterns subject to each service's requirements. For Azure Site Recovery, only the two regional-vault patterns apply.</p>
+<p>Use the following patterns subject to each service's requirements.</p>
 <div class="table-wrap kv-table kv-illustrated" tabindex="0" role="region" aria-label="Key Vault comparison"><table>
 <thead>
 <tr>
