@@ -40,7 +40,7 @@ def pill(x, y, w, h, l1, l2, fill="#0F6CBD", c1="#fff", c2="#DDEBF9"):
 
 
 def region(x, title, vault1, vault2, note, status, kind, faded=False, vault_stroke="#0F6CBD"):
-    """Use the same regional container and vault geometry in all eight patterns."""
+    """Use the same regional container and vault geometry in all patterns."""
     op = ' opacity=".85"' if faded else ""
     s = f'<g{op}><rect x="{x}" y="96" width="150" height="140" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-dasharray="4 3"/>'
     s += f'<use href="#i-pin" x="{x + 8}" y="108" width="12" height="12" color="#0F6CBD"/><text x="{x + 24}" y="118" font-size="10" font-weight="700" fill="#0F548C">{title}</text>'
@@ -93,14 +93,6 @@ def d_s1():
     s += region(B, "Region B", "Key Vault", "(own copy)", "secrets / certificates", "Full read + write", "rw")
     s += distribution(both=True) + legend("Independent copies; no vault-to-vault replication")
     return svg(s, "An approved deployment pipeline loads secrets and certificates into each regional vault independently. There is no vault-to-vault replication.")
-
-
-def d_s2():
-    s = source("Approved deployment pipeline", "Load secrets and certificates into primary")
-    s += region(A, "Region A", "Key Vault", "(primary)", "secrets / certificates", "Read + write", "rw")
-    s += region(B, "Paired region", "Key Vault", "(Microsoft copy)", "secrets / certificates", "Read-only on failover", "ro", faded=True, vault_stroke="#8CC0EE")
-    s += distribution() + replication() + legend("Dashed: Microsoft-managed asynchronous replication")
-    return svg(s, "A deployment pipeline loads secrets and certificates into the primary Key Vault. Microsoft asynchronously replicates them to its paired-region copy, which is read-only after Microsoft-managed failover.")
 
 
 def d_k1():
@@ -157,11 +149,10 @@ def d_k6():
     return svg(s, "A Managed HSM with an External Key Management proxy in region A uses a key that stays in the customer's own HSM outside Azure. Region B has no failover target because External Key Management does not support geo-replication.")
 
 
-DIAGRAMS = {"S1": d_s1, "S2": d_s2, "K1": d_k1, "K2": d_k2, "K3": d_k3,
+DIAGRAMS = {"S1": d_s1, "K1": d_k1, "K2": d_k2, "K3": d_k3,
             "K4": d_k4, "K5": d_k5, "K6": d_k6}
 FIGNAMES = {
     "figKVS1": ("key-vault-secrets-per-region", "S1"),
-    "figKVS2": ("key-vault-secrets-paired-region", "S2"),
     "figKVK1": ("key-vault-keys-paired-region", "K1"),
     "figKVK2": ("key-vault-keys-vault-per-region", "K2"),
     "figKVK3": ("key-vault-keys-byok-per-region", "K3"),
@@ -287,20 +278,14 @@ def page2():
         ("bf", "Best for", "Mission-critical workloads that need a short recovery time."),
         ("lm", "Watch for", "You must keep the vaults in sync with your pipeline."),
     ], "figKVS1", "S1")
-    c2 = card("2", "Standard or Premium vault in a paired region", [
-        ("cr", "Created in", "Pipeline populates primary; Microsoft asynchronously replicates to its paired-region copy."),
-        ("ok", "Outage", "Read-only until failover ends: you can read, but not create, update, or rotate."),
-        ("bf", "Best for", "Less critical workloads that accept read-only access and Microsoft's failover timing."),
-        ("lm", "Watch for", "Check eligible same-geography pairing and exclusions. Microsoft can delay failover for hours or longer."),
-    ], "figKVS2", "S2")
     guide = ('<div class="eyebrow mt8" style="color:var(--s600)"><a href="https://azure.github.io/multi-region-platform/key-vault-across-regions.html#failover-guidance">Failover Guidance</a></div>'
              '<div class="row" style="gap:20px;align-items:stretch;margin-top:5px"><div class="note" style="flex:1;padding:8px 14px"><h4>Standard/Premium failover</h4>'
              '<p class="small" style="color:var(--ink);font-size:10.8px">You cannot trigger this best-effort failover. Initiation can take hours or longer, independently of other services; recent changes can be lost. Once initiated, public routing is designed to take a few minutes; private endpoints can add up to 20 minutes. Routing timings are not total outage duration.</p></div>'
              '<div class="note" style="flex:1;padding:8px 14px"><h4>Customer-managed failover</h4>'
              '<p class="small" style="color:var(--ink);font-size:10.8px">If Microsoft-managed recovery misses your RTO, choose supported workload regions and prepare identities, permissions, networking, and versions. Independent vaults need tested application fallback and return to the primary; a second vault alone is not enough. Point-in-time Key Vault backups restore only within the same subscription and Azure geography.</p></div></div>')
-    body = (head("Service guides · Key Vault · Secrets and certificates", "Secrets and certificates: two patterns",
+    body = (head("Service guides · Key Vault · Secrets and certificates", "Secrets and certificates: regional vaults",
                  "Secrets and certificates can be loaded into any vault by a pipeline. That makes a vault in each region practical.")
-            + f'<div class="kv-grid2 mt12">{c1}{c2}</div>' + guide)
+            + f'<div class="kv-grid2 mt12" style="grid-template-columns:1fr;max-width:570px;margin-left:auto;margin-right:auto">{c1}</div>' + guide)
     return page(body)
 
 
@@ -390,14 +375,9 @@ def tree_svg():
 
     s = '<defs><marker id="kv-tree-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#2B88D8" stroke-width="1.5"/></marker></defs>'
     s += '<text x="50" y="20" font-size="17" font-weight="700" fill="#04807A">Secrets and certificates</text>'
-    s += box(50, 36, "Need full read and write", "in the surviving region?")
-    s += right(360, 36, 450, "No")
-    s += box(450, 36, "Eligible same-geography pair", "and accept read-only recovery?")
-    s += box(850, 0, "Standard or Premium vault", "in a paired region", "k")
-    s += box(850, 92, "Standard or Premium vault", "in each region", "k")
-    s += link("M760 62 C810 62 810 26 850 26", 773, 48, "Yes")
-    s += link("M605 88 C605 118 810 118 850 118", 615, 107, "No")
-    s += link("M205 88 C205 174 810 174 850 118", 215, 145, "Yes")
+    s += box(50, 62, "Populate each vault through pipelines", "Customer-managed application failover")
+    s += right(360, 62, 850, "")
+    s += box(850, 62, "Standard or Premium vault", "in each region", "k")
     s += '<text x="50" y="194" font-size="17" font-weight="700" fill="#0F548C">Keys - validate the consuming service first</text>'
     s += box(50, 210, "Must physical key custody remain", "in an HSM outside Microsoft?")
     s += right(360, 210, 850)

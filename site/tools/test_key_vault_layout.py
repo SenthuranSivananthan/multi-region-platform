@@ -37,13 +37,18 @@ class KeyVaultLayoutTests(unittest.TestCase):
                     self.assertIn(condition, bullet)
         self.assertNotIn("Confirm the consuming service's support", summary)
 
-    def test_all_eight_patterns_are_paired(self):
+    def test_all_seven_patterns_are_paired(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         store = []
         original = site_build.postprocess(site_build.expand_raw(site_build.render_md(body, store), store))
         result = site_build.key_vault_pattern_layout(original)
-        self.assertEqual(result.count('class="kv-pattern"'), 8)
-        self.assertEqual(result.count('class="kv-pattern-copy"'), 8)
+        self.assertEqual(result.count('class="kv-pattern"'), 7)
+        self.assertEqual(result.count('class="kv-pattern-copy"'), 7)
+        self.assertNotIn("secrets-certificates-pattern-2", result)
+        self.assertNotIn('data-fig="key-vault-secrets-paired-region"', result)
+        secrets_tree = keyvault.tree_svg().split("Keys - validate", 1)[0]
+        self.assertNotIn("in a paired region", secrets_tree)
+        self.assertIn("in each region", secrets_tree)
         self.assertEqual(re.findall(r'<h[23]\b.*?</h[23]>', original),
                          re.findall(r'<h[23]\b.*?</h[23]>', result))
         self.assertEqual(re.findall(r'<figure\b.*?</figure>', original, re.S),
@@ -57,7 +62,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertEqual(site_build.key_vault_pattern_layout(source), source)
 
     def test_diagrams_share_source_and_region_geometry(self):
-        self.assertEqual(set(keyvault.DIAGRAMS), {"S1", "S2", "K1", "K2", "K3", "K4", "K5", "K6"})
+        self.assertEqual(set(keyvault.DIAGRAMS), {"S1", "K1", "K2", "K3", "K4", "K5", "K6"})
         for name, draw in keyvault.DIAGRAMS.items():
             with self.subTest(pattern=name):
                 diagram = ET.fromstring(draw())
@@ -81,7 +86,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
                 self.assertEqual(sum(p.get("d", "").endswith("136 138") or p.get("d", "").endswith("336 138") for p in paths if "C" in p.get("d", "")),
                                  2 if name in ("S1", "K2", "K3") else 1)
                 self.assertEqual(sum(p.get("d") == "M148 154 C170 142 190 138 212 150" for p in paths),
-                                 1 if name in ("S2", "K1", "K4", "K5") else 0)
+                                 1 if name in ("K1", "K4", "K5") else 0)
                 self.assertEqual(sum(p.get("d") == "M212 170 C190 182 170 186 148 174" for p in paths),
                                  1 if name in ("K4", "K5") else 0)
         self.assertIn("Register key reference only", keyvault.d_k6())
@@ -114,15 +119,20 @@ class KeyVaultLayoutTests(unittest.TestCase):
         headers = re.findall(r"<thead>(.*?)</thead>", result, re.S)
         self.assertTrue(all(not re.search(r">Pattern \d", header) for header in headers))
         keys_header = next(header for header in headers if 'href="#keys-pattern-1"' in header)
-        secrets_header = next(header for header in headers if 'href="#secrets-certificates-pattern-1"' in header)
         self.assertIn('>Standard or Premium vault with paired-region replication</a>', keys_header)
         self.assertIn('class="table-wrap kv-table kv-wide"', result)
         self.assertEqual(keys_header.count('<th scope="col">'), 7)
-        self.assertIn('>Standard or Premium vault in each region</a>', secrets_header)
-        self.assertIn('>Standard or Premium vault in a paired region</a>', secrets_header)
-        for title in ("Standard or Premium vault in each region", "Standard or Premium vault in a paired region"):
-            self.assertIn(title, keyvault.page2())
-            self.assertIn(title, (ROOT / "decks" / "full" / "key-vault.js").read_text(encoding="utf-8"))
+        self.assertIn('<h2 id="secrets-and-certificates">Secrets and certificates management patterns', result)
+        self.assertIn('<h2 id="keys">Keys management patterns', result)
+        secrets = result.split('<h2 id="secrets-and-certificates">', 1)[1].split('<h2 id="keys">', 1)[0]
+        self.assertNotIn("<table>", secrets)
+        self.assertIn('id="secrets-certificates-pattern-1"', secrets)
+        self.assertEqual(secrets.count("Treat each independent region as a deployment stamp."), 1)
+        self.assertLess(secrets.index("Treat each independent region"), secrets.index('id="secrets-certificates-pattern-1"'))
+        deck = (ROOT / "decks" / "full" / "key-vault.js").read_text(encoding="utf-8")
+        for source in (keyvault.page2(), deck):
+            self.assertIn("Standard or Premium vault in each region", source)
+            self.assertNotIn("Standard or Premium vault in a paired region", source)
         self.assertNotRegex(re.sub(r"<[^>]+>", "", result), r"\b[KS][1-7]\b")
 
     def test_later_patterns_keep_side_by_side_layout(self):
@@ -134,6 +144,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
     def test_failover_guidance_is_explicit(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         self.assertNotIn("\n## Failover Guidance\n", body)
+        self.assertNotIn("\n## Choose the product\n", body)
         self.assertIn('<a id="failover-guidance"></a>', body)
         for heading in ("Microsoft-managed failover for Azure Key Vault Standard or Premium",
                         "Microsoft-managed failover for Azure Key Vault Managed HSM",
@@ -141,7 +152,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
             self.assertIn(f"\n## {heading}\n", body)
             self.assertNotIn(f"\n### {heading}\n", body)
         guidance = body[body.index("## Microsoft-managed failover for Azure Key Vault Standard or Premium"):]
-        guidance = guidance.split("## Choose the product", 1)[0]
+        guidance = guidance.split("## Secrets and certificates management patterns", 1)[0]
         microsoft, customer = guidance.split("## Customer-managed failover", 1)
         microsoft = microsoft.split("## Microsoft-managed failover for Azure Key Vault Standard or Premium", 1)[1]
         microsoft = microsoft.split("## Microsoft-managed failover for Azure Key Vault Managed HSM", 1)[0]
@@ -181,7 +192,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         store = []
         result = site_build.postprocess(site_build.expand_raw(site_build.render_md(body, store), store))
-        customer = result.split('id="customer-managed-failover"', 1)[1].split('id="choose-the-product"', 1)[0]
+        customer = result.split('id="customer-managed-failover"', 1)[1].split('id="secrets-and-certificates"', 1)[0]
         self.assertIn("recovery time objectives (RTOs)", customer)
         self.assertIn("choose regions for your workloads", customer)
         self.assertLess(customer.index("Prepare identities"), customer.index("<table>"))
@@ -350,7 +361,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
     def test_decision_tree_pattern_boxes_share_colors(self):
         tree = ET.fromstring(f"<svg>{keyvault.tree_svg()}</svg>")
         results = [rect for rect in tree.findall("rect") if rect.get("x") == "850"]
-        self.assertEqual(len(results), 8)
+        self.assertEqual(len(results), 7)
         self.assertEqual({(rect.get("fill"), rect.get("stroke")) for rect in results},
                          {("#EEF5FC", "#0F6CBD")})
         labels = [text for text in tree.findall("text") if text.get("x") == "860"]
@@ -363,7 +374,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertTrue(all(number == anchor for number, _, anchor in headings))
         self.assertEqual(headings[0][1], "Standard or Premium vault with paired-region replication")
         self.assertNotIn("#keys-pattern-7", body)
-        pattern = body.split("## Keys\n", 1)[1].split("### Pattern 1:", 1)[1].split("### Pattern 2:", 1)[0]
+        pattern = body.split("## Keys management patterns {#keys}\n", 1)[1].split("### Pattern 1:", 1)[1].split("### Pattern 2:", 1)[0]
         for phrase in ("Standard for software-protected", "Premium for HSM-protected",
                        "Premium does not improve regional recovery control", "Read-only",
                        "no key creation or rotation", "key-vault-keys-paired-region.png"):

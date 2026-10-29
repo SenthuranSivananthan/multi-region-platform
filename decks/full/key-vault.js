@@ -31,12 +31,12 @@ module.exports = (pres, L) => {
     s.addNotes('Microsoft-managed failover is best effort. Initiation can take hours or longer after the outage; endpoint convergence is not the application RTO. Key Vault can be a runtime dependency even when data is recoverable. Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies. Use independent vaults or supported Managed HSM replication. Regional eligibility: https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region . HSM cryptographic boundaries and backup/restore geography requirements: https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds . ' + reference);
     s.addNotes('Managed HSM regional resiliency and replication: https://learn.microsoft.com/azure/reliability/reliability-managed-hsm');
     const failoverHeading = '## Microsoft-managed failover for Azure Key Vault Standard or Premium\n';
-    s.addNotes(failoverHeading + article.split(failoverHeading)[1].split('\n## Choose the product')[0] + '\n' + reference + '#failover-guidance');
+    s.addNotes(failoverHeading + article.split(failoverHeading)[1].split('\n## Secrets and certificates management patterns')[0] + '\n' + reference + '#failover-guidance');
   }
 
   const groups = [
     {
-      title: 'Secrets and certificates: two patterns',
+      title: 'Secrets and certificates: regional vaults',
       guidance: 'If Microsoft-managed recovery misses your RTO, use a vault in each supported workload region. Automate provisioning; configure and test application fallback.',
       patterns: [
         ['1', 'Standard or Premium vault in each region', 'secrets-per-region',
@@ -44,11 +44,6 @@ module.exports = (pres, L) => {
           'Full read and write in each region.',
           'Mission-critical; short recovery time.',
           'Keep vaults synchronized through the pipeline.'],
-        ['2', 'Standard or Premium vault in a paired region', 'secrets-paired-region',
-          'One vault; Microsoft replicates and fails it over.',
-          'Read-only: no create, update, or rotation.',
-          'Less critical; accepts Microsoft failover timing.',
-          'Requires an eligible same-geography pair; check exclusions.'],
       ],
     },
     {
@@ -163,6 +158,6 @@ module.exports = (pres, L) => {
     const treeWidth = 4.95 * imageRatio('decision-tree');
     L.image(s, media('decision-tree'), { x: (13.33 - treeWidth) / 2, y: 1.55, w: treeWidth, h: 4.95 }, 'Decision tree for secrets, certificates, and keys: recovery needs, regional pairing, external key ownership, and BYOK.');
     L.txt(s, 'Validate current service behavior, supported regions, consumer-service constraints, and recovery objectives before you commit.', 0.6, 6.55, 12.13, 0.3, { fontSize: 11, color: C.muted });
-    s.addNotes('Secrets and certificates: Standard or Premium vault in each region for independent regional read-write needs; Standard or Premium vault in a paired region for eligible same-geography read-only recovery. Keys: Managed HSM with external key management for external custody; Managed HSM with geo-replication or Managed HSM geo-replication with external HSM and BYOK for a shared replicated store; Standard or Premium vault in each region or Premium vault per region with external HSM and BYOK for supported independent vaults; Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. No matching candidate: revisit design. Validate consuming-service support first. ' + reference);
+    s.addNotes('Secrets and certificates: Standard or Premium vault in each region, populated through deployment pipelines, with customer-managed application failover. Keys: Managed HSM with external key management for external custody; Managed HSM with geo-replication or Managed HSM geo-replication with external HSM and BYOK for a shared replicated store; Standard or Premium vault in each region or Premium vault per region with external HSM and BYOK for supported independent vaults; Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. No matching candidate: revisit design. Validate consuming-service support first. ' + reference);
   }
 };

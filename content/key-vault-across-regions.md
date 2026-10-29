@@ -1,6 +1,6 @@
 ---
 title: Key Vault across regions
-description: Compare two secrets and certificates patterns and six key patterns, with regional diagrams, service-specific recovery scenarios, and a decision tree.
+description: Use regional vaults for secrets and certificates and compare six key patterns, with regional diagrams, service-specific recovery scenarios, and a decision tree.
 ms.date: 10/29/2026
 ms.topic: conceptual
 ---
@@ -67,31 +67,11 @@ Consider customer-controlled failover design patterns when Microsoft-managed fai
 | Key Vault Standard or Premium (Keys, Secrets, Certificates) | <ul><li>One [vault per region](#secrets-certificates-pattern-1).</li><li>Local read/write access.</li></ul> | <ul><li>Use an automation pipeline for secrets and certificates.</li><li>With an on-premises HSM, consider [BYOK into each Premium vault](#keys-pattern-3).</li><li>HSM-backed BYOK requires Premium, not Standard.</li></ul> | <ul><li>Use SDK retries with exponential backoff and respect DNS TTL.</li><li>Design application fallback to the recovery region to meet your RTO.</li><li>Test connectivity regularly.</li></ul> |
 | Key Vault Managed HSM (Keys) | <ul><li>Enable [geo-replication](#keys-pattern-4) to a supported extended region.</li><li>Both regions support read/write, with asynchronous replication in either direction.</li><li>Microsoft manages routing and failover.</li></ul> | <ul><li>Keys only.</li><li>Generate in Managed HSM or [import from your on-premises HSM using BYOK](#keys-pattern-5), then replicate.</li></ul> | <ul><li>Use SDK retries with exponential backoff and respect DNS TTL.</li><li>Reads and writes continue if either region fails.</li><li>DNS routes to the closest available region (5-second TTL); caching can delay failover.</li><li>Replication: Key and role changes can take up to 6 minutes; regions may differ during this window.</li><li>External keys (EKM) cannot be geo-replicated.</li></ul> |
 
-## Choose the product
+## Secrets and certificates management patterns {#secrets-and-certificates}
 
-Key Vault is multi-tenant; Managed HSM is single-tenant. Keep the product choice separate from the regional deployment choice.
+Use a Standard or Premium vault in each region, populated through deployment pipelines. Managed HSM does not support secrets nor certificates.
 
-| Capability | Key Vault Standard | Key Vault Premium | Managed HSM | Managed HSM with EKM |
-|---|---|---|---|---|
-| Key protection | Software, FIPS 140 Level 1 | HSM, FIPS 140-3 Level 3 | Single-tenant HSM, FIPS 140-3 Level 3 | Customer-owned HSM outside Microsoft |
-| Artifacts | Keys, secrets, certificates | Keys, secrets, certificates; symmetric keys in preview | Asymmetric and symmetric keys | External key references |
-| Availability | Automatic zone redundancy where supported | Same regional resilience as Standard | Rack-level redundancy; optional extended region | Also depends on your proxy and HSM |
-| Regional replication | Eligible same-geography pair | Eligible same-geography pair | One supported extended region | No geo-replication |
-| SLA | 99.99% | 99.99% | 99.9% single region; 99.99% replicated | No end-to-end SLA for external keys |
-
-With external key management (EKM), Managed HSM authenticates and authorizes requests, but the key encryption key stays in your external HSM. You operate the proxy, HSM, and their recovery path. See the [product selection guidance](https://learn.microsoft.com/azure/security/fundamentals/key-management-choose) and [current SLA terms](https://www.microsoft.com/licensing/docs/view/Service-Level-Agreements-SLA-for-Online-Services).
-
-## Secrets and certificates
-
-Use Standard or Premium vaults. Managed HSM and EKM do not store secrets or certificates. Compare the patterns, then review their distribution diagrams.
-
-| Compare | [Standard or Premium vault in each region](#secrets-certificates-pattern-1) | [Standard or Premium vault in a paired region](#secrets-certificates-pattern-2) |
-|---|---|---|
-| Deployment | One Standard or Premium vault per workload per region | One Standard or Premium vault with a Microsoft-managed paired-region copy |
-| Artifact distribution | Pipeline populates each vault | Pipeline populates primary; Microsoft replicates |
-| During an outage | Full local read and write | Read-only after Microsoft-managed failover |
-| Best fit | Short, customer-controlled recovery | Workloads that accept Microsoft-managed recovery |
-| Main constraint | Keep vaults synchronized | Eligible pair and read-only recovery |
+Treat each independent region as a deployment stamp. Do not store secret values in the IaC repository. Optional application-level fallback to another vault requires explicit identity, networking, and version-selection design; a second endpoint alone does not provide safe fallback.
 
 ### Pattern 1: Standard or Premium vault in each region {#secrets-certificates-pattern-1}
 
@@ -105,21 +85,7 @@ Use Standard or Premium vaults. Managed HSM and EKM do not store secrets or cert
 
 *Secrets and certificates - Pattern 1: independent Standard or Premium vaults populated by a pipeline.*
 
-### Pattern 2: Standard or Premium vault in a paired region {#secrets-certificates-pattern-2}
-
-- **Deployment:** One Standard or Premium vault in a region eligible for Microsoft-managed paired-region replication.
-- **Artifact origin:** The pipeline populates the primary vault; Microsoft asynchronously replicates its contents.
-- **During an outage:** Microsoft decides when to fail over. Afterward you can read, but cannot create, update, renew, or rotate objects until normal operation returns.
-- **Best for:** Workloads that can tolerate Microsoft-managed recovery timing and read-only access.
-- **Watch for:** Confirm the same-geography pairing, service exclusions, and recovery path rather than assuming any pair qualifies.
-
-:::image type="content" source="./media/key-vault-secrets-paired-region.png" alt-text="A deployment pipeline loads secrets and certificates into the primary Key Vault. Microsoft asynchronously replicates them to its paired-region copy, which is read-only after Microsoft-managed failover." lightbox="./media/key-vault-secrets-paired-region.png":::
-
-*Secrets and certificates - Pattern 2: one Standard or Premium vault with a Microsoft-managed paired-region copy.*
-
-Treat each independent region as a deployment stamp. Do not store secret values in the IaC repository. Optional application-level fallback to another vault requires explicit identity, networking, and version-selection design; a second endpoint alone does not provide safe fallback.
-
-## Keys
+## Keys management patterns {#keys}
 
 Customer-managed keys (CMKs) protect a service's data encryption keys; the data service still encrypts and decrypts the data. Bring your own key (BYOK) means importing externally generated key material. Here, BYOK refers to the supported HSM-to-HSM transfer process, not generic software-key import.
 
@@ -310,9 +276,9 @@ Identify whether the requirement concerns an Azure Rights Management tenant key,
 
 ## Decision tree
 
-Check the scenario conditions before following the chart. Results identify candidate patterns, not universal service support. "Secrets and certificates" uses Patterns 1-2; "Keys" uses Patterns 1-6.
+Check the scenario conditions before following the chart. Results identify candidate patterns, not universal service support. "Secrets and certificates" uses Pattern 1; "Keys" uses Patterns 1-6.
 
-:::image type="content" source="./media/key-vault-decision-tree.png" alt-text="Decision tree for secrets and certificates and keys, with results labeled by pattern name. Secrets and certificates: choose a Standard or Premium vault in each region or in a paired region. Keys: choose Managed HSM with external key management for external custody; Managed HSM with geo-replication, optionally with external HSM and BYOK, for a shared replicated key store; Standard or Premium vaults in each region, or Premium vaults per region with external HSM and BYOK, for independent regional vaults; or a Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. Validate consuming-service support first." lightbox="./media/key-vault-decision-tree.png":::
+:::image type="content" source="./media/key-vault-decision-tree.png" alt-text="Decision tree for secrets and certificates and keys, with results labeled by pattern name. Secrets and certificates: use a Standard or Premium vault in each region, populated through deployment pipelines with customer-managed application failover. Keys: choose Managed HSM with external key management for external custody; Managed HSM with geo-replication, optionally with external HSM and BYOK, for a shared replicated key store; Standard or Premium vaults in each region, or Premium vaults per region with external HSM and BYOK, for independent regional vaults; or a Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. Validate consuming-service support first." lightbox="./media/key-vault-decision-tree.png":::
 
 *Select a candidate pattern, then validate the consuming service's replication, restore, and key-lifecycle requirements.*
 
