@@ -11,18 +11,9 @@ ms.topic: conceptual
 
 - **Certificates and secrets:** Use [a Key Vault in each region](#secrets-certificates-pattern-1). Manage objects in each vault through deployment pipelines, with customer-managed application failover.
 
-> [!NOTE] EXAMPLE SCENARIOS
-> [Application-level secrets or certificates](#application-level-secrets-or-certificates).
-
 - **Single KEK (key encryption key):** Use [Key Vault paired-region replication](#keys-pattern-1) with Microsoft-managed failover. The primary and paired vault regions do not need to match the consuming services' regions. Alternative: [Managed HSM with geo-replication](#keys-pattern-4).
 
-> [!NOTE] EXAMPLE SCENARIOS
-> [Application-level encryption](#application-level-encryption-single-kek), [Storage GRS](#azure-storage-grs), [SQL DB, SQL MI and Cosmos DB geo-replication](#database-geo-replication), [SQL DB, SQL MI and Cosmos DB geo-restore](#database-geo-restore), [Purview Information Protection](#purview-information-protection).
-
 - **Dual KEK (key encryption key):** Use [a Key Vault in each region](#keys-pattern-2). Manage objects in each vault through deployment pipelines, with customer-managed application failover. Alternative: [Managed HSM with geo-replication](#keys-pattern-4).
-
-> [!NOTE] EXAMPLE SCENARIOS
-> [Application-level encryption](#application-level-encryption), [Storage object replication](#storage-object-replication), [PostgreSQL and MySQL Flexible Server](#postgresql-and-mysql-flexible-server), [VM disk encryption](#vm-disk-encryption), [Azure Site Recovery](#azure-site-recovery).
 
 <a id="failover-guidance"></a>
 
@@ -82,13 +73,15 @@ Consider customer-controlled failover design patterns when Microsoft-managed fai
 
 ## Secrets and certificates scenarios
 
-### Application-level secrets or certificates
+<a id="application-level-secrets-or-certificates"></a>
 
 Your workload decides whether each region uses independent secrets and certificates or shares common ones. It uses the Key Vault in its own region and can optionally fail over to secrets and certificates in a recovery region if its primary region is unavailable.
 
 **Patterns you can use:**
 
-- [Standard or Premium vault in each region](#secrets-certificates-pattern-1).
+| Pattern | Object provisioning | Recovery behavior | Diagram |
+|---|---|---|---|
+| [Standard or Premium vault in each region](#secrets-certificates-pattern-1) | An approved deployment pipeline populates each regional vault with secrets and certificates. | Each region has independent read/write access. The application manages failover to a recovery-region vault; there is no vault-to-vault replication. | :::image type="content" source="./media/key-vault-secrets-per-region.png" alt-text="An approved deployment pipeline loads secrets and certificates into each regional vault independently. There is no vault-to-vault replication." lightbox="./media/key-vault-secrets-per-region.png"::: |
 
 ## Single KEK (key encryption key) scenarios
 
@@ -97,32 +90,27 @@ A single KEK design uses a shared key encryption key to protect the data encrypt
 > [!IMPORTANT]
 > Key Vault regions can be selected independently of the consuming services' regions. For Standard or Premium vaults, choose a region with a reciprocal region pair in the same Azure geography. This enables Microsoft-managed failover to the paired region for recovery during a regional outage. Failover remains best effort, without a guaranteed recovery time.
 
+**Patterns you can use:**
+
+Use one of these shared-key patterns for the scenarios below, subject to each service's requirements.
+
+| Pattern | Key origin | Recovery behavior | Diagram |
+|---|---|---|---|
+| [Standard or Premium vault with paired-region replication](#keys-pattern-1) | Created in Azure Key Vault; software-protected in Standard or HSM-protected in Premium. | Both data copies depend on Microsoft-managed vault recovery. Failover is best effort, and the recovered vault is read-only. | :::image type="content" source="./media/key-vault-keys-paired-region.png" alt-text="A Standard or Premium vault generates the key in region A, using software or HSM protection respectively. Microsoft asynchronously replicates it to a paired-region copy of the same vault, which is read-only after failover." lightbox="./media/key-vault-keys-paired-region.png"::: |
+| [Managed HSM with geo-replication](#keys-pattern-4) | Created in Managed HSM. | Maintain access to the shared key through geo-replication; both regions support reads and writes. | :::image type="content" source="./media/key-vault-keys-managed-hsm-geo.png" alt-text="Managed HSM creates the key in the primary region. Asynchronous multi-region replication synchronizes keys and roles between the primary and extended regions. Both regions support reads and writes." lightbox="./media/key-vault-keys-managed-hsm-geo.png"::: |
+| [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5) | Created in an external HSM and imported using BYOK. | Maintain access to the shared key through geo-replication; both regions support reads and writes. | :::image type="content" source="./media/key-vault-keys-managed-hsm-geo-byok.png" alt-text="A customer-owned external HSM supplies a BYOK import into the primary Managed HSM. Managed HSM then replicates key material and roles to the extended region; both regions serve reads and writes." lightbox="./media/key-vault-keys-managed-hsm-geo-byok.png"::: |
+
 ### Application-level encryption {#application-level-encryption-single-kek}
 
 Your application is limited to using a single key encryption key across all regions.
-
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
 
 ### Azure Storage - Geo-redundant storage (GRS) {#azure-storage-grs}
 
 GRS copies are replicas of one storage account, not independently configured accounts. Both depend on that account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See [Storage CMKs](https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview).
 
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
-
 ### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication {#database-geo-replication}
 
 SQL Database and SQL Managed Instance need the required TDE protector keys available to their replicas. See [SQL customer-managed TDE](https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview) and [Cosmos DB CMKs](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys).
-
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
 
 ### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore {#database-geo-restore}
 
@@ -130,11 +118,6 @@ Restoring data does not restore access to its encryption keys. Retain all histor
 
 > [!IMPORTANT]
 > Geo-restore is not possible for Microsoft-managed key (MMK) or Customer-managed key (CMK) scenarios when using paired regions in different geographies.
-
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
 
 ### Purview Information Protection
 
@@ -145,42 +128,38 @@ Restoring data does not restore access to its encryption keys. Retain all histor
 > [!IMPORTANT]
 > Default to Microsoft-managed keys unless regulation clearly requires customer control; where customer-managed keys are mandatory, create and preserve keys outside the primary geography and validate recovery design before production rollout.
 
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1), using Premium: the documented HSM-backed vault option; preserve keys for old content. If you manage your own on-premises HSM, we recommend BYOK with a Premium vault. Review [How to generate and transfer HSM-protected keys (BYOK)](https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli) for supported HSMs and key-transfer instructions.
-- [Managed HSM with geo-replication](#keys-pattern-4): a suitable solution for a shared, regionally replicated key store; configure key access and lifecycle for the specific Information Protection feature.
-- [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): a suitable solution when key material is created in an external HSM and imported into a replicated Managed HSM. Preserve keys for old content.
-
 ## Dual KEK (key encryption key) scenarios
 
 A dual KEK design uses separate key encryption keys for the primary and recovery regions, rather than one shared KEK. Each KEK protects the data encryption keys (DEKs) used by its regional data copy. The consuming service must support independent regional keys and make the recovery data decryptable with the recovery region's key. Provision and test regional key access, and preserve the key material and versions required by existing data and backups.
+
+**Patterns you can use:**
+
+Use the following patterns subject to each service's requirements. For Azure Site Recovery, only the two regional-vault patterns apply.
+
+| Pattern | Key origin | Recovery behavior | Diagram |
+|---|---|---|---|
+| [Standard or Premium vault in each region](#keys-pattern-2) | A separate key is generated in each regional vault. | Each surviving region retains full local read and write access; the service uses its configured regional key. | :::image type="content" source="./media/key-vault-keys-vault-per-region.png" alt-text="A separate Key Vault, Standard or Premium, in each region creates its own key. The regions hold different keys and operate independently without vault-to-vault replication." lightbox="./media/key-vault-keys-vault-per-region.png"::: |
+| [Premium vault per region with external HSM and BYOK](#keys-pattern-3) | Created in an external HSM and imported into each Premium vault. | Each surviving region uses its local imported key. Coordinate imports, versions, rotation, and service configuration. | :::image type="content" source="./media/key-vault-keys-byok-per-region.png" alt-text="A customer-owned external HSM is the key origin. The BYOK process imports the same key into a Premium vault in each region, with no vault-to-vault replication." lightbox="./media/key-vault-keys-byok-per-region.png"::: |
+| [Managed HSM with geo-replication](#keys-pattern-4) | Created in Managed HSM. | Maintain access through Managed HSM geo-replication; both regions support reads and writes. | :::image type="content" source="./media/key-vault-keys-managed-hsm-geo.png" alt-text="Managed HSM creates the key in the primary region. Asynchronous multi-region replication synchronizes keys and roles between the primary and extended regions. Both regions support reads and writes." lightbox="./media/key-vault-keys-managed-hsm-geo.png"::: |
+| [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5) | Created in an external HSM and imported using BYOK. | Maintain access through Managed HSM geo-replication; both regions support reads and writes. | :::image type="content" source="./media/key-vault-keys-managed-hsm-geo-byok.png" alt-text="A customer-owned external HSM supplies a BYOK import into the primary Managed HSM. Managed HSM then replicates key material and roles to the extended region; both regions serve reads and writes." lightbox="./media/key-vault-keys-managed-hsm-geo-byok.png"::: |
 
 ### Application-level encryption
 
 Your application decides whether each region uses an independent key or a common key. Preserve the key identifier and version needed to decrypt existing data. EKM is designed for compatible CMK encryption-at-rest integrations and exposes a restricted operation set; do not assume arbitrary application signing or encryption works unchanged. See [key operations](https://learn.microsoft.com/azure/key-vault/keys/about-keys-details) and [external key lifecycle](https://learn.microsoft.com/azure/key-vault/managed-hsm/external-key-management-key-lifecycle).
 
-**Patterns you can use:**
-
-- [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): the application must handle independent regional keys or imports.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): use supported Managed HSM operations, including imported keys for BYOK.
+The application must handle independent regional keys or regional imports. When using Managed HSM, use supported operations, including imported keys for BYOK.
 
 ### Azure Storage - Object replication for block blobs {#storage-object-replication}
 
 Source and destination are separate accounts, so their CMK configuration can be independent. Validate each account's identity, key versions, and recovery behavior. Do not carry GRS's shared-account constraint into this topology. See [object replication](https://learn.microsoft.com/azure/storage/blobs/object-replication-overview).
 
-**Patterns you can use:**
-
-- [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): source and destination accounts can use independent keys; for BYOK, import and authorize keys for each account.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): configure each account's CMK integration.
+Source and destination accounts can use independent keys. For BYOK, import and authorize keys for each account. With Managed HSM, configure each account's CMK integration.
 
 ### PostgreSQL and MySQL Flexible Server
 
 Distinguish read replicas, geo-redundant backups, and geo-restore. Their key, region, and identity requirements are not interchangeable. Provision recovery-region keys and identities as required; verify each product separately. See [PostgreSQL encryption](https://learn.microsoft.com/azure/postgresql/security/security-data-encryption) and [MySQL encryption](https://learn.microsoft.com/azure/mysql/security/security-customer-managed-key).
 
-**Patterns you can use:**
-
-- [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): meet regional key and identity requirements; for BYOK, validate key import for the recovery feature.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): confirm Managed HSM support and regional requirements for that feature, including BYOK import where used.
+Meet regional key and identity requirements; for BYOK, validate key import for the recovery feature. Confirm Managed HSM support and regional requirements for that feature, including BYOK import where used.
 
 ### VM disk encryption
 
@@ -188,13 +167,10 @@ You can choose to manage encryption at the level of each managed disk, with your
 
 Azure managed disks handle encryption and decryption by using envelope encryption. Envelope encryption lets you rotate keys periodically without affecting your VMs. During rotation, the Storage service re-wraps DEKs with the new key version, and the underlying disk data isn't re-encrypted. Keep both the old and new key versions enabled until re-wrapping completes. See [Server-side encryption of Azure managed disks](https://learn.microsoft.com/en-us/azure/virtual-machines/disk-encryption#azure-managed-disk-encryption-key-management).
 
+Configure regional Disk Encryption Sets and keys, including regional imports for BYOK. With Managed HSM, satisfy the disk/key-store regional requirements, including imported key access for BYOK.
+
 > [!IMPORTANT]
 > Key Vault must be in the same region as each Disk Encryption Set.
-
-**Patterns you can use:**
-
-- [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): configure regional Disk Encryption Sets and keys, including regional imports for BYOK.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): satisfy the disk/key-store regional requirements, including imported key access for BYOK.
 
 ### Azure Site Recovery
 
@@ -203,14 +179,11 @@ Pre-create a compatible target-region Disk Encryption Set and authorize it to ac
 > [!IMPORTANT]
 > ASR uses Single KEK and Dual KEK. It uses Storage GRS for the temporary replication cache (using Single KEK) and disk encryption for the VM disks in the source and target regions (using Dual KEK).
 
-**Patterns you can use:**
-
-- [Standard or Premium vault in each region](#keys-pattern-2): the documented regional-vault approach, with target-region Disk Encryption Set access.
-- [Premium vault per region with external HSM and BYOK](#keys-pattern-3): validate the imported key and complete Site Recovery configuration.
+Use only [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3). The documented regional-vault approach requires target-region Disk Encryption Set access. For BYOK, validate the imported key and complete Site Recovery configuration.
 
 ## Secrets and certificates patterns {#secrets-and-certificates}
 
-Use a Standard or Premium vault in each region, populated through deployment pipelines. Managed HSM does not support secrets nor certificates.
+For secrets and certificates, choose between independent regional vaults and a vault with Microsoft-managed paired-region replication. Managed HSM does not support secrets or certificates.
 
 Treat each independent region as a deployment stamp. Do not store secret values in the IaC repository. Optional application-level fallback to another vault requires explicit identity, networking, and version-selection design; a second endpoint alone does not provide safe fallback.
 
@@ -225,6 +198,18 @@ Treat each independent region as a deployment stamp. Do not store secret values 
 :::image type="content" source="./media/key-vault-secrets-per-region.png" alt-text="An approved deployment pipeline loads secrets and certificates into each regional vault independently. There is no vault-to-vault replication." lightbox="./media/key-vault-secrets-per-region.png":::
 
 *Secrets and certificates - Pattern 1: independent Standard or Premium vaults populated by a pipeline.*
+
+### Pattern 2: Standard or Premium vault in a paired region {#secrets-certificates-pattern-2}
+
+- **Deployment:** One Standard or Premium vault in a region eligible for Microsoft-managed paired-region replication.
+- **Artifact origin:** The pipeline populates the primary vault; Microsoft asynchronously replicates its contents.
+- **During an outage:** Microsoft decides when to fail over. Afterward you can read, but cannot create, update, renew, or rotate objects until normal operation returns.
+- **Best for:** Workloads that can tolerate Microsoft-managed recovery timing and read-only access.
+- **Watch for:** Confirm the same-geography pairing, service exclusions, and recovery path rather than assuming any pair qualifies.
+
+:::image type="content" source="./media/key-vault-secrets-paired-region.png" alt-text="A deployment pipeline loads secrets and certificates into the primary Key Vault. Microsoft asynchronously replicates them to its paired-region copy, which is read-only after Microsoft-managed failover." lightbox="./media/key-vault-secrets-paired-region.png":::
+
+*Secrets and certificates - Pattern 2: one Standard or Premium vault with a Microsoft-managed paired-region copy.*
 
 ## Keys management patterns {#keys}
 
@@ -317,7 +302,7 @@ For replicated Managed HSM, respect DNS time to live (TTL) so clients can reach 
 
 Check the scenario conditions before following the chart. Results identify candidate patterns, not universal service support. "Secrets and certificates" uses Pattern 1; "Keys" uses Patterns 1-6.
 
-:::image type="content" source="./media/key-vault-decision-tree.png" alt-text="Decision tree for secrets and certificates and keys, with results labeled by pattern name. Secrets and certificates: use a Standard or Premium vault in each region, populated through deployment pipelines with customer-managed application failover. Keys: choose Managed HSM with external key management for external custody; Managed HSM with geo-replication, optionally with external HSM and BYOK, for a shared replicated key store; Standard or Premium vaults in each region, or Premium vaults per region with external HSM and BYOK, for independent regional vaults; or a Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. Validate consuming-service support first." lightbox="./media/key-vault-decision-tree.png":::
+:::image type="content" source="./media/key-vault-decision-tree.png" alt-text="Decision tree for secrets and certificates and keys, with results labeled by pattern name. Secrets and certificates: use a Standard or Premium vault in each region for customer-managed application failover, or a Standard or Premium vault in a paired region when eligible and Microsoft-managed recovery timing and read-only access are acceptable. Keys: choose Managed HSM with external key management for external custody; Managed HSM with geo-replication, optionally with external HSM and BYOK, for a shared replicated key store; Standard or Premium vaults in each region, or Premium vaults per region with external HSM and BYOK, for independent regional vaults; or a Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. Validate consuming-service support first." lightbox="./media/key-vault-decision-tree.png":::
 
 *Select a candidate pattern, then validate the consuming service's replication, restore, and key-lifecycle requirements.*
 

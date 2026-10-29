@@ -113,7 +113,7 @@ Keep the full Key Vault guide to at most five rendered PDF pages: regional guida
 Use `data-export-width` on a figure to set its standalone export width independently of the PDF column width. The eight Key Vault pattern diagrams use 380 pixels so their web and PNG objects have consistent sizes; their PDF placement follows the available columns.
 Use descriptive, linked pattern names in comparison-table headers, not numbered shorthand. Keep applicable patterns and their service conditions directly under each scenario, with links back to the pattern details; do not reintroduce a scenario-by-pattern matrix.
 
-The private DNS article uses `content/media/private-dns-global-zone.png` and `private-dns-regional-zones.png`, imported from the supplied HTML diagrams. The website discovers it through `content/toc.yml`; the PDF mapping places its four pages after Key Vault. The single-file HTML exporter embeds the shared images. `55-service-guides.js` calls `key-vault.js`, then `private-dns.js`. Executive editions point to the guides without reproducing these technical pages. `whitepaper/gen/keyvault.py` generates the five Key Vault pages and eight registered diagrams; edit that generator, rerun it, extract figures, and rebuild both full outputs. To publish website-only changes, run `python3 site/build.py`.
+The private DNS article uses `content/media/private-dns-global-zone.png` and `private-dns-regional-zones.png`, imported from the supplied HTML diagrams. The website discovers it through `content/toc.yml`; the PDF mapping places its four pages after Key Vault. The single-file HTML exporter embeds the shared images. `55-service-guides.js` calls `key-vault.js`, then `private-dns.js`. Executive editions point to the guides without reproducing these technical pages. `whitepaper/gen/keyvault.py` generates the five Key Vault pages and nine registered diagrams; edit that generator, rerun it, extract figures, and rebuild both full outputs. To publish website-only changes, run `python3 site/build.py`.
 
 ## Markdown conventions
 
@@ -121,7 +121,7 @@ The website generator (`site/build.py`) renders these Learn constructs:
 
 | Syntax | Website rendering |
 |---|---|
-| `:::image type="content" source="./media/x.png" alt-text="...":::` followed by an italic paragraph | Live scalable figure with caption, zoom, and PNG download; PNG fallback if no extracted figure exists |
+| `:::image type="content" source="./media/x.png" alt-text="...":::` followed by an italic paragraph | Live scalable figure with caption, zoom, and PNG download; PNG fallback if no extracted figure exists. The image directive also works inside Markdown table cells, without a separate caption paragraph. |
 | `:::row:::` / `:::column:::` | Card grid |
 | `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` | Alert boxes; append a plain-text title, e.g. `> [!NOTE] EXAMPLE SCENARIOS`, to override the default label |
 | `> [!div class="nextstepaction"]` | Next-step button |

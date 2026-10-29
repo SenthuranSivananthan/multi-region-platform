@@ -26,5 +26,6 @@
  "figKVK4": "key-vault-keys-managed-hsm-geo",
  "figKVK5": "key-vault-keys-managed-hsm-geo-byok",
  "figKVTree": "key-vault-decision-tree",
- "figKVK6": "key-vault-keys-managed-hsm-ekm"
+ "figKVK6": "key-vault-keys-managed-hsm-ekm",
+ "figKVS2": "key-vault-secrets-paired-region"
 }

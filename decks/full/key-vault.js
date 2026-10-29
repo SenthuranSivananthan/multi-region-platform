@@ -36,14 +36,19 @@ module.exports = (pres, L) => {
 
   const groups = [
     {
-      title: 'Secrets and certificates: regional vaults',
-      guidance: 'If Microsoft-managed recovery misses your RTO, use a vault in each supported workload region. Automate provisioning; configure and test application fallback.',
+      title: 'Secrets and certificates: two patterns',
+      guidance: 'Use regional vaults for customer-managed recovery, or an eligible paired-region vault if Microsoft-managed recovery timing and read-only access are acceptable.',
       patterns: [
         ['1', 'Standard or Premium vault in each region', 'secrets-per-region',
           'An approved pipeline loads each vault; IaC configures the resources.',
           'Full read and write in each region.',
           'Mission-critical; short recovery time.',
           'Keep vaults synchronized through the pipeline.'],
+        ['2', 'Standard or Premium vault in a paired region', 'secrets-paired-region',
+          'Pipeline populates the primary vault; Microsoft asynchronously replicates.',
+          'Read-only after Microsoft-managed failover; no create, update, renewal, or rotation.',
+          'Workloads accepting Microsoft-managed recovery timing and read-only access.',
+          'Eligible same-geography pair and service exclusions; best-effort failover can take hours or longer.'],
       ],
     },
     {
@@ -120,12 +125,23 @@ module.exports = (pres, L) => {
     article.split('## Single KEK (key encryption key) scenarios\n')[1].split('\n## Dual KEK (key encryption key) scenarios')[0],
     article.split('## Dual KEK (key encryption key) scenarios\n')[1].split('\n## Secrets and certificates patterns')[0],
   ];
-  const scenarios = scenarioSections.flatMap(section => section.split('\n### ').slice(1)).map(section => {
-    const [title, ...lines] = section.split('\n');
+  const tablePatternSummary = text => text.split('\n').filter(line => line.startsWith('| [')).map(line => {
+    const [, pattern, , recovery] = line.split('|').map(cell => cell.trim());
+    return '- ' + pattern + ': ' + recovery;
+  });
+  const sharedPatternSummaries = scenarioSections.map(section =>
+    tablePatternSummary(section.split('\n### ')[0].split('**Patterns you can use:**')[1]));
+  const scenarios = scenarioSections.flatMap((section, sectionIndex) => section.split('\n### ').slice(1).map(scenario => {
+    const [heading, ...lines] = scenario.split('\n');
+    const title = heading.replace(/ \{#[^}]+\}$/, '');
     const body = lines.join('\n').trim();
-    const summary = '**Patterns you can use:**\n\n' + body.split('**Patterns you can use:**')[1].trim();
-    return { title: title.replace(/ \{#[^}]+\}$/, ''), body, summary };
-  }).filter((scenario, index, scenarios) => scenarios.findIndex(other => other.title === scenario.title) === index);
+    const localPatternIds = Array.from(body.matchAll(/\]\((#keys-pattern-\d)\)/g), match => match[1]);
+    const patterns = sharedPatternSummaries[sectionIndex].filter(pattern =>
+      localPatternIds.length === 0 || localPatternIds.some(id => pattern.includes('(' + id + ')')));
+    if (patterns.length === 0) throw new Error('No key patterns found for ' + title);
+    const summary = '**Patterns you can use:**\n\n' + patterns.join('\n');
+    return { title, body: body + '\n\n' + summary, summary };
+  })).filter((scenario, index, scenarios) => scenarios.findIndex(other => other.title === scenario.title) === index);
   const linkedText = text => {
     const runs = [];
     for (const line of text.split('\n').filter(line => line.trim())) {
@@ -161,6 +177,6 @@ module.exports = (pres, L) => {
     const treeWidth = 4.95 * imageRatio('decision-tree');
     L.image(s, media('decision-tree'), { x: (13.33 - treeWidth) / 2, y: 1.55, w: treeWidth, h: 4.95 }, 'Decision tree for secrets, certificates, and keys: recovery needs, regional pairing, external key ownership, and BYOK.');
     L.txt(s, 'Validate current service behavior, supported regions, consumer-service constraints, and recovery objectives before you commit.', 0.6, 6.55, 12.13, 0.3, { fontSize: 11, color: C.muted });
-    s.addNotes('Secrets and certificates: Standard or Premium vault in each region, populated through deployment pipelines, with customer-managed application failover. Keys: Managed HSM with external key management for external custody; Managed HSM with geo-replication or Managed HSM geo-replication with external HSM and BYOK for a shared replicated store; Standard or Premium vault in each region or Premium vault per region with external HSM and BYOK for supported independent vaults; Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. No matching candidate: revisit design. Validate consuming-service support first. ' + reference);
+    s.addNotes('Secrets and certificates: Standard or Premium vault in each region for customer-managed application failover, or Standard or Premium vault in a paired region when eligible and Microsoft-managed recovery timing and read-only access are acceptable. Keys: Managed HSM with external key management for external custody; Managed HSM with geo-replication or Managed HSM geo-replication with external HSM and BYOK for a shared replicated store; Standard or Premium vault in each region or Premium vault per region with external HSM and BYOK for supported independent vaults; Standard or Premium vault with paired-region replication for eligible Microsoft-managed recovery. No matching candidate: revisit design. Validate consuming-service support first. ' + reference);
   }
 };
