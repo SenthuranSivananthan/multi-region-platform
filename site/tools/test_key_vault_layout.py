@@ -15,10 +15,11 @@ spec.loader.exec_module(keyvault)
 
 
 class KeyVaultLayoutTests(unittest.TestCase):
-    def test_tldr_summarizes_three_recovery_scenarios(self):
+    def test_summary_summarizes_three_recovery_scenarios(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
-        self.assertLess(body.index("## TL;DR"), body.index("## Microsoft-managed failover\n"))
-        summary = body.split("## TL;DR\n", 1)[1].split("\n## ", 1)[0]
+        self.assertLess(body.index("## Summary"), body.index("## Microsoft-managed failover\n"))
+        self.assertNotIn("## TL;DR", body)
+        summary = body.split("## Summary\n", 1)[1].split("\n## ", 1)[0]
         self.assertNotIn("**Secrets and Certificates management patterns**", summary)
         self.assertNotIn("**Key management patterns**", summary)
         bullets = re.findall(r"^- (.+)$", summary, re.M)

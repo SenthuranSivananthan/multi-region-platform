@@ -7,7 +7,7 @@ ms.topic: conceptual
 
 # Key Vault across regions
 
-## TL;DR
+## Summary
 
 - **Certificates and secrets:** Use [a Key Vault in each region](#secrets-certificates-pattern-1). Manage objects in each vault through deployment pipelines, with customer-managed application failover.
 
