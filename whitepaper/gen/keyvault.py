@@ -201,6 +201,7 @@ STYLE = """<style>
   .kv-quad .fig { grid-column:2; grid-row:2 / 6; align-self:center; margin:0; }
   .kv-scenarios { display:grid; grid-template-columns:1fr 1fr; gap:5px 18px; font-size:10px; line-height:1.3; }
   .kv-scenarios p { margin:0; padding-top:4px; border-top:1px solid var(--line); }
+  .kv-scenarios p:last-child { grid-column:1 / -1; }
   .kv-lead { font-size: 12.4px; line-height: 1.45; color: var(--muted); }
   .kv-tag { display: inline-block; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--b50); color: var(--b700); margin-left: 6px; vertical-align: middle; }
 </style>"""
@@ -265,7 +266,7 @@ def scenario_summary():
         ("PostgreSQL / MySQL Flexible", "Replica, geo-backup, and geo-restore have different key, region, and identity rules."),
         ("Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication", "SQL permits documented regional key copies; Cosmos DB has account-level CMK requirements."),
         ("Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore", "Retain historical keys; validate target region, identities, and backup requirements."),
-        ("Purview Information Protection", "Managed HSM geo-replication, with or without BYOK, is suitable. EKM remains feature-specific. Preserve keys for old content."),
+        ("Purview Information Protection", 'If you manage your own on-premises HSM, we recommend BYOK with a Premium vault. Review <a href="https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli">How to generate and transfer HSM-protected keys (BYOK)</a> for supported HSMs and key-transfer instructions. Managed HSM geo-replication, with or without BYOK, is suitable. EKM remains feature-specific. Preserve keys for old content.'),
     ]
     anchors = ["application-level-encryption", "azure-storage-grs", "storage-object-replication",
                "vm-disk-encryption", "azure-site-recovery", "postgresql-and-mysql-flexible-server",

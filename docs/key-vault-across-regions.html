@@ -102,7 +102,7 @@
   <main id="main">
     <div class="crumbs">Multi-region platform <span>/</span> Service Guides for Multi Region</div>
     <h1 class="title">Key Vault across regions</h1>
-    <p class="meta">October 28, 2026 · 20 min read</p>
+    <p class="meta">October 29, 2026 · 20 min read</p>
     <article class="prose">
 <p>Key Vault is often a runtime dependency: an application can need keys, secrets, and certificates just to start. Recovering data in another region is not enough if its key cannot be reached. Start with regional behavior, compare the products and patterns, then check the consuming service's requirements.</p>
 <p><strong>Secrets and Certificates management patterns</strong></p>
@@ -410,8 +410,7 @@
 <p>Identify whether the requirement concerns an Azure Rights Management tenant key, Microsoft 365 Customer Key, or another protection feature. These are not interchangeable integrations. For tenant-key BYOK, the documented Premium-vault approach imports an external HSM key into Azure; it is not direct real-time use of an on-premises HSM. Preserve keys that protect old content and test recovery before production. Consider Microsoft-managed keys unless customer control is required. See <a href="https://learn.microsoft.com/purview/rights-management-byok" target="_blank" rel="noopener">Rights Management BYOK</a>.</p>
 <p><strong>Patterns you can use:</strong></p>
 <ul>
-<li><a href="#keys-pattern-1">Standard or Premium vault with paired-region replication</a>, using Premium: the documented HSM-backed vault option; preserve keys for old content. Standard software-protected keys require feature-specific confirmation.</li>
-<li><a href="#keys-pattern-3">Premium vault per region with external HSM and BYOK</a>: use its external-HSM import approach with a dedicated Premium vault. Do not treat Microsoft 365 as a regional deployment stamp.</li>
+<li><a href="#keys-pattern-1">Standard or Premium vault with paired-region replication</a>, using Premium: the documented HSM-backed vault option; preserve keys for old content. If you manage your own on-premises HSM, we recommend BYOK with a Premium vault. Review <a href="https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli" target="_blank" rel="noopener">How to generate and transfer HSM-protected keys (BYOK)</a> for supported HSMs and key-transfer instructions.</li>
 <li><a href="#keys-pattern-4">Managed HSM with geo-replication</a>: a suitable solution for a shared, regionally replicated key store; configure key access and lifecycle for the specific Information Protection feature.</li>
 <li><a href="#keys-pattern-5">Managed HSM geo-replication with external HSM and BYOK</a>: a suitable solution when key material is created in an external HSM and imported into a replicated Managed HSM. Preserve keys for old content.</li>
 </ul>

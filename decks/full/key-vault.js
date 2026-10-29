@@ -149,8 +149,9 @@ module.exports = (pres, L) => {
       const x = 0.6 + i * 4.11;
       L.box(s, x, 1.5, 3.91, 5.2, { fill: C.wash });
       const longTitle = title.length > 60;
+      const detailed = title === 'Purview Information Protection';
       L.txt(s, title, x + 0.16, 1.67, 3.59, longTitle ? 0.95 : 0.55, { fontSize: 14, bold: true, color: C.ink });
-      L.txt(s, linkedText(summary), x + 0.16, longTitle ? 2.7 : 2.3, 3.59, longTitle ? 3.8 : 4.2, { fontSize: 11, color: C.text, paraSpaceAfter: 6 });
+      L.txt(s, linkedText(summary), x + 0.16, longTitle ? 2.7 : 2.3, 3.59, longTitle ? 3.8 : 4.2, { fontSize: detailed ? 10 : 11, color: C.text, paraSpaceAfter: detailed ? 4 : 6 });
     });
     L.txt(s, 'Select a linked pattern name for deployment details. Conditional options require feature-specific validation; full caveats are in the guide and notes.', 0.6, 6.85, 12.13, 0.2, { fontSize: 10.5, color: C.muted });
     s.addNotes(scenarios.slice(offset, offset + 3).map(({ title, body }) => title + '\n' + body).join('\n\n').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)') + '\n' + reference);

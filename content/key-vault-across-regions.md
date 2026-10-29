@@ -1,7 +1,7 @@
 ---
 title: Key Vault across regions
 description: Compare two secrets and certificates patterns and six key patterns, with regional diagrams, service-specific recovery scenarios, and a decision tree.
-ms.date: 10/28/2026
+ms.date: 10/29/2026
 ms.topic: conceptual
 ---
 
@@ -294,8 +294,7 @@ Identify whether the requirement concerns an Azure Rights Management tenant key,
 
 **Patterns you can use:**
 
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1), using Premium: the documented HSM-backed vault option; preserve keys for old content. Standard software-protected keys require feature-specific confirmation.
-- [Premium vault per region with external HSM and BYOK](#keys-pattern-3): use its external-HSM import approach with a dedicated Premium vault. Do not treat Microsoft 365 as a regional deployment stamp.
+- [Standard or Premium vault with paired-region replication](#keys-pattern-1), using Premium: the documented HSM-backed vault option; preserve keys for old content. If you manage your own on-premises HSM, we recommend BYOK with a Premium vault. Review [How to generate and transfer HSM-protected keys (BYOK)](https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli) for supported HSMs and key-transfer instructions.
 - [Managed HSM with geo-replication](#keys-pattern-4): a suitable solution for a shared, regionally replicated key store; configure key access and lifecycle for the specific Information Protection feature.
 - [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): a suitable solution when key material is created in an external HSM and imported into a replicated Managed HSM. Preserve keys for old content.
 
