@@ -15,7 +15,9 @@ ms.topic: conceptual
 
 <a id="failover-guidance"></a>
 
-## Microsoft-managed failover for Azure Key Vault Standard or Premium
+## Microsoft-managed failover
+
+### Microsoft-managed failover for Azure Key Vault Standard or Premium
 
 Keep using the same vault URI; Microsoft reroutes requests after failover. You cannot trigger this failover. Initiation can take hours or longer, independently of other services. Asynchronous replication means recent changes can be lost.
 
@@ -30,7 +32,7 @@ Keep using the same vault URI; Microsoft reroutes requests after failover. You c
 | Nonreciprocal (asymmetric) region pairing | [Unsupported](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region) | Region A is paired with Region B, but Region B is paired with another region or has no pair. A one-way pairing does not qualify. |
 | Regions without a pair | [Unsupported](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region) | The primary region has no paired region for Microsoft-managed failover. |
 
-## Microsoft-managed failover for Azure Key Vault Managed HSM
+### Microsoft-managed failover for Azure Key Vault Managed HSM
 
 Managed HSM resources are deployed into a single Azure region. If the region becomes unavailable, your Managed HSM is also unavailable. Managed HSM supports [multiregion replication](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication), which you can use to extend a Managed HSM pool from one Azure region (the *primary region*) to a second Azure region (the *extended region*).
 

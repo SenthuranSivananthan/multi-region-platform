@@ -30,7 +30,7 @@ module.exports = (pres, L) => {
     L.txt(s, 'Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies.', 0.75, 6.46, 11.83, 0.35, { fontSize: 11, italic: true, color: C.ink });
     s.addNotes('Microsoft-managed failover is best effort. Initiation can take hours or longer after the outage; endpoint convergence is not the application RTO. Key Vault can be a runtime dependency even when data is recoverable. Microsoft-managed failover is not supported for non-paired regions, regions with asymmetric pairing or paired regions across two different geographies. Use independent vaults or supported Managed HSM replication. Regional eligibility: https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region . HSM cryptographic boundaries and backup/restore geography requirements: https://learn.microsoft.com/azure/key-vault/general/overview-security-worlds . ' + reference);
     s.addNotes('Managed HSM regional resiliency and replication: https://learn.microsoft.com/azure/reliability/reliability-managed-hsm');
-    const failoverHeading = '## Microsoft-managed failover for Azure Key Vault Standard or Premium\n';
+    const failoverHeading = '## Microsoft-managed failover\n';
     s.addNotes(failoverHeading + article.split(failoverHeading)[1].split('\n## Secrets and certificates management patterns')[0] + '\n' + reference + '#failover-guidance');
   }
 

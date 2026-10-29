@@ -17,7 +17,7 @@ spec.loader.exec_module(keyvault)
 class KeyVaultLayoutTests(unittest.TestCase):
     def test_tldr_summarizes_three_recovery_scenarios(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
-        self.assertLess(body.index("## TL;DR"), body.index("## Microsoft-managed failover for Azure Key Vault Standard or Premium"))
+        self.assertLess(body.index("## TL;DR"), body.index("## Microsoft-managed failover\n"))
         summary = body.split("## TL;DR\n", 1)[1].split("\n## ", 1)[0]
         self.assertNotIn("**Secrets and Certificates management patterns**", summary)
         self.assertNotIn("**Key management patterns**", summary)
@@ -146,16 +146,27 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertNotIn("\n## Failover Guidance\n", body)
         self.assertNotIn("\n## Choose the product\n", body)
         self.assertIn('<a id="failover-guidance"></a>', body)
-        for heading in ("Microsoft-managed failover for Azure Key Vault Standard or Premium",
-                        "Microsoft-managed failover for Azure Key Vault Managed HSM",
-                        "Customer-managed failover"):
+        for heading in ("Microsoft-managed failover", "Customer-managed failover"):
             self.assertIn(f"\n## {heading}\n", body)
             self.assertNotIn(f"\n### {heading}\n", body)
-        guidance = body[body.index("## Microsoft-managed failover for Azure Key Vault Standard or Premium"):]
+        for heading in ("Microsoft-managed failover for Azure Key Vault Standard or Premium",
+                        "Microsoft-managed failover for Azure Key Vault Managed HSM"):
+            self.assertIn(f"\n### {heading}\n", body)
+            self.assertNotIn(f"\n## {heading}\n", body)
+        store = []
+        result = site_build.render_md(body, store)
+        parent = result.index('<h2 id="microsoft-managed-failover">')
+        standard = result.index('<h3 id="microsoft-managed-failover-for-azure-key-vault-standard-or-premium">')
+        hsm = result.index('<h3 id="microsoft-managed-failover-for-azure-key-vault-managed-hsm">')
+        customer_heading = result.index('<h2 id="customer-managed-failover">')
+        self.assertLess(parent, standard)
+        self.assertLess(standard, hsm)
+        self.assertLess(hsm, customer_heading)
+        guidance = body[body.index("## Microsoft-managed failover\n"):]
         guidance = guidance.split("## Secrets and certificates management patterns", 1)[0]
         microsoft, customer = guidance.split("## Customer-managed failover", 1)
-        microsoft = microsoft.split("## Microsoft-managed failover for Azure Key Vault Standard or Premium", 1)[1]
-        microsoft = microsoft.split("## Microsoft-managed failover for Azure Key Vault Managed HSM", 1)[0]
+        microsoft = microsoft.split("### Microsoft-managed failover for Azure Key Vault Standard or Premium", 1)[1]
+        microsoft = microsoft.split("### Microsoft-managed failover for Azure Key Vault Managed HSM", 1)[0]
         self.assertTrue(microsoft.strip().startswith("Keep using the same vault URI;"))
         important = microsoft.split("> [!IMPORTANT]\n", 1)[1].split("\n\n", 1)[0]
         self.assertEqual(important.count("> - "), 2)
@@ -252,7 +263,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
 
     def test_managed_hsm_failover_guidance(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
-        managed_hsm = body.split("## Microsoft-managed failover for Azure Key Vault Managed HSM\n", 1)[1]
+        managed_hsm = body.split("### Microsoft-managed failover for Azure Key Vault Managed HSM\n", 1)[1]
         managed_hsm = managed_hsm.split("## Customer-managed failover", 1)[0]
         for removed in ("Failover occurs when one of the regions", "#### Failover behavior",
                         "| Affected Region | Reads Allowed | Writes Allowed |",

@@ -111,7 +111,8 @@
 <li><strong>Dual KEK (key encryption key):</strong> Use <a href="#keys-pattern-2">a Key Vault in each region</a>. Manage objects in each vault through deployment pipelines, with customer-managed application failover. Alternative: <a href="#keys-pattern-4">Managed HSM with geo-replication</a>.</li>
 </ul>
 <p><a id="failover-guidance"></a></p>
-<h2 id="microsoft-managed-failover-for-azure-key-vault-standard-or-premium">Microsoft-managed failover for Azure Key Vault Standard or Premium<a class="anchor" href="#microsoft-managed-failover-for-azure-key-vault-standard-or-premium" aria-label="Link to this section">#</a></h2>
+<h2 id="microsoft-managed-failover">Microsoft-managed failover<a class="anchor" href="#microsoft-managed-failover" aria-label="Link to this section">#</a></h2>
+<h3 id="microsoft-managed-failover-for-azure-key-vault-standard-or-premium">Microsoft-managed failover for Azure Key Vault Standard or Premium<a class="anchor" href="#microsoft-managed-failover-for-azure-key-vault-standard-or-premium" aria-label="Link to this section">#</a></h3>
 <p>Keep using the same vault URI; Microsoft reroutes requests after failover. You cannot trigger this failover. Initiation can take hours or longer, independently of other services. Asynchronous replication means recent changes can be lost.</p>
 <div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><ul>
 <li>Microsoft-managed failover is best effort, not a customer-triggered recovery mechanism or a guaranteed application recovery time. Once initiated, public endpoint convergence is designed to take a few minutes; private endpoints can require up to an additional 20 minutes. Do not treat those routing timings as the total outage duration.</li>
@@ -144,7 +145,7 @@
 </tr>
 </tbody>
 </table></div>
-<h2 id="microsoft-managed-failover-for-azure-key-vault-managed-hsm">Microsoft-managed failover for Azure Key Vault Managed HSM<a class="anchor" href="#microsoft-managed-failover-for-azure-key-vault-managed-hsm" aria-label="Link to this section">#</a></h2>
+<h3 id="microsoft-managed-failover-for-azure-key-vault-managed-hsm">Microsoft-managed failover for Azure Key Vault Managed HSM<a class="anchor" href="#microsoft-managed-failover-for-azure-key-vault-managed-hsm" aria-label="Link to this section">#</a></h3>
 <p>Managed HSM resources are deployed into a single Azure region. If the region becomes unavailable, your Managed HSM is also unavailable. Managed HSM supports <a href="https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication" target="_blank" rel="noopener">multiregion replication</a>, which you can use to extend a Managed HSM pool from one Azure region (the <em>primary region</em>) to a second Azure region (the <em>extended region</em>).</p>
 <p>For reliability details, see <a href="https://learn.microsoft.com/azure/reliability/reliability-managed-hsm" target="_blank" rel="noopener">Reliability in Azure Key Vault Managed HSM</a>.</p>
 <div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><p><strong>If a primary or extended region goes down, you can still perform both read and write operations.</strong></p>
@@ -429,7 +430,7 @@
   <aside class="rail" aria-label="In this article">
     <div class="rail-in">
       <p class="rail-h">In this article</p>
-      <ul><li><a href="#tldr">TL;DR</a></li><li><a href="#microsoft-managed-failover-for-azure-key-vault-standard-or-premium">Microsoft-managed failover for Azure Key Vault Standard or Premium</a></li><li><a href="#microsoft-managed-failover-for-azure-key-vault-managed-hsm">Microsoft-managed failover for Azure Key Vault Managed HSM</a></li><li><a href="#customer-managed-failover">Customer-managed failover</a></li><li><a href="#secrets-and-certificates">Secrets and certificates management patterns</a></li><li><a href="#keys">Keys management patterns</a></li><li><a href="#common-key-management-scenarios">Common key-management scenarios</a></li><li><a href="#decision-tree">Decision tree</a></li><li><a href="#reference-links">Reference links</a></li></ul>
+      <ul><li><a href="#tldr">TL;DR</a></li><li><a href="#microsoft-managed-failover">Microsoft-managed failover</a></li><li><a href="#customer-managed-failover">Customer-managed failover</a></li><li><a href="#secrets-and-certificates">Secrets and certificates management patterns</a></li><li><a href="#keys">Keys management patterns</a></li><li><a href="#common-key-management-scenarios">Common key-management scenarios</a></li><li><a href="#decision-tree">Decision tree</a></li><li><a href="#reference-links">Reference links</a></li></ul>
     </div>
   </aside>
 </div>
