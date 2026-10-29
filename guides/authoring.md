@@ -123,7 +123,7 @@ The website generator (`site/build.py`) renders these Learn constructs:
 |---|---|
 | `:::image type="content" source="./media/x.png" alt-text="...":::` followed by an italic paragraph | Live scalable figure with caption, zoom, and PNG download; PNG fallback if no extracted figure exists |
 | `:::row:::` / `:::column:::` | Card grid |
-| `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` | Alert boxes |
+| `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` | Alert boxes; append a plain-text title, e.g. `> [!NOTE] EXAMPLE SCENARIOS`, to override the default label |
 | `> [!div class="nextstepaction"]` | Next-step button |
 | `**Question:**`, `**Decision:**`, `**Takeaway:**` | Styled callouts |
 | `**Fits when:**`, `**Regional footprint:**`, `**Key considerations:**`, `**Reassess when:**` | Profile attribute rows |

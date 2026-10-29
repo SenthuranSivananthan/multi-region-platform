@@ -35,7 +35,39 @@ class KeyVaultLayoutTests(unittest.TestCase):
             for condition in conditions:
                 with self.subTest(condition=condition):
                     self.assertIn(condition, bullet)
+        groups = re.split(r"(?m)^- ", summary)[1:]
+        for group, targets in zip(groups, (
+                ["#application-level-secrets-or-certificates"],
+                ["#application-level-encryption-single-kek", "#azure-storage-grs",
+                 "#database-geo-replication", "#database-geo-restore", "#purview-information-protection"],
+                ["#application-level-encryption", "#storage-object-replication",
+                 "#postgresql-and-mysql-flexible-server", "#vm-disk-encryption", "#azure-site-recovery"])):
+            self.assertIn("> [!NOTE] EXAMPLE SCENARIOS\n> ", group)
+            self.assertNotIn("> **", group)
+            examples = group.split("> [!NOTE] EXAMPLE SCENARIOS\n> ", 1)[1].split("\n", 1)[0]
+            links = re.findall(r"\[([^\]]+)\]\((#[^)]+)\)", examples)
+            self.assertEqual([target for _, target in links], targets)
+            self.assertEqual(examples, ", ".join(f"[{label}]({target})" for label, target in links) + ".")
+        store = []
+        rendered = site_build.expand_raw(site_build.render_md(summary, store), store)
+        self.assertEqual(rendered.count('<div class="alert note">'), 3)
+        self.assertEqual(re.findall(r'<p class="alert-title">.*?</svg>(.*?)</p>', rendered, re.S),
+                         ["EXAMPLE SCENARIOS"] * 3)
+        self.assertEqual(rendered.count("<ul>"), 3)
+        self.assertEqual(rendered.count("<li>"), 3)
         self.assertNotIn("Confirm the consuming service's support", summary)
+
+    def test_alert_titles_preserve_defaults_and_escape_custom_text(self):
+        for marker, title in (
+                ("[!NOTE]", "Note"),
+                ("[!IMPORTANT]", "Important"),
+                ("[!NOTE] EXAMPLE SCENARIOS", "EXAMPLE SCENARIOS"),
+                ('[!NOTE] <custom> & "title"', "&lt;custom&gt; &amp; &quot;title&quot;")):
+            with self.subTest(marker=marker):
+                store = []
+                rendered = site_build.expand_raw(site_build.render_md(f"> {marker}\n> Content.", store), store)
+                self.assertIn(f"</svg>{title}</p>", rendered)
+                self.assertIn("<p>Content.</p>", rendered)
 
     def test_all_seven_patterns_are_paired(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
@@ -127,6 +159,15 @@ class KeyVaultLayoutTests(unittest.TestCase):
             self.assertIn(condition, description)
         self.assertNotIn("The key can be replicated or copied", description)
 
+    def test_dual_kek_description_explains_independent_regional_keys(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        self.assertNotIn("## Common key-management scenarios", body)
+        description = body.split("## Dual KEK (key encryption key) scenarios\n", 1)[1].split("\n### ", 1)[0]
+        for condition in ("separate key encryption keys", "primary and recovery regions",
+                          "data encryption keys (DEKs)", "must support independent regional keys",
+                          "recovery data decryptable", "preserve the key material and versions"):
+            self.assertIn(condition, description)
+
     def test_scenarios_use_linked_pattern_lists_instead_of_a_matrix(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         store = []
@@ -134,20 +175,50 @@ class KeyVaultLayoutTests(unittest.TestCase):
             site_build.postprocess(site_build.expand_raw(site_build.render_md(body, store), store)))
         self.assertNotIn('id="paired-and-nonpaired-regions"', result)
         self.assertLess(result.index('id="failover-guidance"'), result.index("<table>"))
-        start = result.index('id="common-key-management-scenarios"')
-        common = result[start:].split('<h2 id="decision-tree">')[0]
-        single = result.split('<h2 id="single-kek-key-encryption-key-scenarios">', 1)[1].split('<h2 id="secrets-and-certificates">', 1)[0]
-        self.assertEqual(len(re.findall(r"<h3\b", single)), 4)
-        self.assertEqual(len(re.findall(r"<h3\b", common)), 5)
+        self.assertNotIn('id="common-key-management-scenarios"', result)
+        dual_heading = '<h2 id="dual-kek-key-encryption-key-scenarios">'
+        dual = result.split(dual_heading, 1)[1].split('<h2 id="secrets-and-certificates">', 1)[0]
+        single = result.split('<h2 id="single-kek-key-encryption-key-scenarios">', 1)[1].split(dual_heading, 1)[0]
+        self.assertLess(result.index('<h2 id="single-kek-key-encryption-key-scenarios">'), result.index(dual_heading))
+        self.assertLess(result.index(dual_heading), result.index('<h2 id="secrets-and-certificates">'))
+        self.assertEqual(len(re.findall(r"<h3\b", single)), 5)
+        self.assertEqual(len(re.findall(r"<h3\b", dual)), 5)
+        single_application = re.search(r'<h3 id="application-level-encryption-single-kek">.*?(?=<h3|\Z)', single, re.S).group(0)
+        dual_application = re.search(r'<h3 id="application-level-encryption">.*?(?=<h3|\Z)', dual, re.S).group(0)
+        self.assertIn("<p>Your application is limited to using a single key encryption key across all regions.</p>", single_application)
+        self.assertNotIn("Your application decides whether", single_application)
+        self.assertIn("Your application decides whether each region uses an independent key or a common key.", dual_application)
+        self.assertEqual(single_application.count("<li>"), 2)
+        self.assertIn("both data copies depend on Microsoft-managed vault recovery.", single_application)
+        self.assertIn("maintain access to the shared key.", single_application)
+        self.assertLess(single_application.index('href="#keys-pattern-1"'),
+                        single_application.index('href="#keys-pattern-4"'))
+        for pattern in (1, 4, 5):
+            self.assertIn(f'href="#keys-pattern-{pattern}"', single_application)
+        for pattern in (2, 3, 6):
+            self.assertNotIn(f'href="#keys-pattern-{pattern}"', single_application)
+        for pattern in (2, 3):
+            self.assertIn(f'href="#keys-pattern-{pattern}"', dual_application)
+        self.assertNotIn('href="#keys-pattern-6"', dual_application)
+        self.assertNotIn('href="#keys-pattern-1"', dual_application)
+        self.assertEqual(dual_application.count("<li>"), 2)
+        self.assertEqual(result.count('id="application-level-encryption-single-kek"'), 1)
         for anchor in ("azure-storage-grs", "database-geo-replication", "database-geo-restore",
                        "purview-information-protection"):
             self.assertIn(f'<h3 id="{anchor}">', single)
-            self.assertNotIn(f'<h3 id="{anchor}">', common)
+            self.assertNotIn(f'<h3 id="{anchor}">', dual)
             self.assertEqual(result.count(f'<h3 id="{anchor}">'), 1)
-        scenarios = single + common
+        dual_anchors = ("application-level-encryption", "storage-object-replication",
+                        "postgresql-and-mysql-flexible-server", "vm-disk-encryption", "azure-site-recovery")
+        self.assertEqual(re.findall(r'<h3 id="([^"]+)">', dual), list(dual_anchors))
+        for anchor in dual_anchors:
+            self.assertIn(f'<h3 id="{anchor}">', dual)
+            self.assertNotIn(f'<h3 id="{anchor}">', single)
+            self.assertEqual(result.count(f'<h3 id="{anchor}">'), 1)
+        scenarios = single + dual
         self.assertNotIn("<table>", scenarios)
         sections = re.split(r"<h3\b", scenarios)[1:]
-        self.assertEqual(len(sections), 9)
+        self.assertEqual(len(sections), 10)
         for section in sections:
             self.assertIn("<strong>Patterns you can use:</strong>", section)
             description = section.split("</h3>", 1)[1].split("<strong>Patterns you can use:</strong>", 1)[0]
@@ -365,31 +436,58 @@ class KeyVaultLayoutTests(unittest.TestCase):
     def test_scenario_sections_preserve_removed_matrix_conditions(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         scenario_sections = (
-            body.split("## Single KEK (key encryption key) scenarios\n", 1)[1].split("\n## Secrets and certificates patterns", 1)[0],
-            body.split("## Common key-management scenarios", 1)[1].split("## Decision tree", 1)[0],
+            body.split("## Single KEK (key encryption key) scenarios\n", 1)[1].split("\n## Dual KEK (key encryption key) scenarios", 1)[0],
+            body.split("## Dual KEK (key encryption key) scenarios\n", 1)[1].split("\n## Secrets and certificates patterns", 1)[0],
         )
         sections = {re.sub(r" \{#[^}]+\}$", "", title): text
                     for scenarios in scenario_sections
                     for title, text in re.findall(r"### ([^\n]+)\n(.*?)(?=\n### |\Z)", scenarios, re.S)}
+        object_replication = sections["Azure Storage - Object replication for block blobs"]
+        self.assertNotIn("(#keys-pattern-1)", object_replication)
+        self.assertNotIn("(#keys-pattern-6)", object_replication)
+        self.assertEqual(len(re.findall(r"^- ", object_replication, re.M)), 2)
+        flexible_server = sections["PostgreSQL and MySQL Flexible Server"]
+        self.assertNotIn("(#keys-pattern-1)", flexible_server)
+        self.assertNotIn("(#keys-pattern-6)", flexible_server)
+        self.assertEqual(len(re.findall(r"^- ", flexible_server, re.M)), 2)
+        vm_disk_encryption = sections["VM disk encryption"]
+        self.assertNotIn("Customer-managed keys offer greater flexibility to manage access controls.", vm_disk_encryption)
+        self.assertIn("> [!IMPORTANT]\n> Key Vault must be in the same region as each Disk Encryption Set.", vm_disk_encryption)
+        self.assertLess(vm_disk_encryption.index("> [!IMPORTANT]"), vm_disk_encryption.index("**Patterns you can use:**"))
+        self.assertNotIn("**Conditional:**", vm_disk_encryption)
+        self.assertNotIn("(#keys-pattern-1)", vm_disk_encryption)
+        self.assertNotIn("EKM does not support Secure Key Release.", vm_disk_encryption)
+        self.assertNotIn("(#keys-pattern-6)", vm_disk_encryption)
+        self.assertNotIn("This is different from guest-based Azure Disk Encryption and confidential VM key release.", vm_disk_encryption)
+        self.assertEqual(len(re.findall(r"^- ", vm_disk_encryption, re.M)), 2)
+        site_recovery = sections["Azure Site Recovery"]
+        self.assertIn("> [!IMPORTANT]\n> ASR uses Single KEK and Dual KEK. It uses Storage GRS for the temporary replication cache (using Single KEK) and disk encryption for the VM disks in the source and target regions (using Dual KEK).", site_recovery)
+        self.assertLess(site_recovery.index("> [!IMPORTANT]"), site_recovery.index("**Patterns you can use:**"))
+        self.assertNotIn("Paired-region vault replication alone does not provision target-region encryption dependencies.", site_recovery)
+        self.assertNotIn("Do not assume Managed HSM or EKM support from general managed-disk support.", site_recovery)
+        self.assertNotIn("**Conditional:**", site_recovery)
         conditions = {
             "Application-level encryption": (
-                "software-protected", "HSM-protected", "independent regional keys",
-                "imported keys", "supported external-key operations", "restricted operation set"),
+                "independent regional keys",
+                "imported keys", "restricted operation set"),
             "Azure Storage - Geo-redundant storage (GRS)": (
                 "Microsoft-managed vault recovery", "shared key",
                 "different key store to each GRS replica"),
             "Azure Storage - Object replication for block blobs": (
                 "independent keys", "import and authorize", "each account's CMK integration",
-                "proxy and external HSM", "separate accounts"),
+                "separate accounts"),
             "VM disk encryption": (
-                "regional imports", "Disk Encryption Sets", "same-region requirements",
-                "imported key", "supported disk profiles", "does not support Secure Key Release"),
+                "regional imports", "Disk Encryption Sets", "same region",
+                "imported key",
+                "envelope encryption", "rotate keys periodically without affecting your VMs",
+                "the underlying disk data isn't re-encrypted",
+                "Keep both the old and new key versions enabled until re-wrapping completes.",
+                "https://learn.microsoft.com/en-us/azure/virtual-machines/disk-encryption#azure-managed-disk-encryption-key-management"),
             "Azure Site Recovery": (
-                "target-region", "imported key", "does not provision",
-                "Do not assume Managed HSM or EKM support", "cache storage account"),
+                "target-region", "imported key", "cache storage account"),
             "PostgreSQL and MySQL Flexible Server": (
-                "product and recovery feature", "key and identity", "validate key import",
-                "Managed HSM support", "recovery feature separately", "geo-redundant backups"),
+                "key and identity", "validate key import",
+                "Managed HSM support", "geo-redundant backups"),
             "Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication": (
                 "maintain access to the shared key", "both data copies depend on Microsoft-managed vault recovery",
                 "Cosmos DB"),

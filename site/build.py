@@ -162,8 +162,9 @@ def render_md(text, store):
             mn = re.match(r'\[!div class="nextstepaction"\]', first)
             if ma:
                 kind = ma.group(1).lower()
+                title = first[ma.end():].strip() or kind.capitalize()
                 inner = render_md("\n".join(block[1:]), store)
-                out.append(keep(f'<div class="alert {kind}"><p class="alert-title"><svg viewBox="0 0 16 16">{ALERT_ICONS[kind]}</svg>{kind.capitalize()}</p>{inner}</div>'))
+                out.append(keep(f'<div class="alert {kind}"><p class="alert-title"><svg viewBox="0 0 16 16">{ALERT_ICONS[kind]}</svg>{html.escape(title)}</p>{inner}</div>'))
             elif mn:
                 rest = " ".join(b.strip() for b in block[1:])
                 ml = re.match(r"\[(.+?)\]\((.+?)\)", rest)

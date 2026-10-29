@@ -117,15 +117,15 @@ module.exports = (pres, L) => {
     }
   });
   const scenarioSections = [
-    article.split('## Single KEK (key encryption key) scenarios\n')[1].split('\n## Secrets and certificates patterns')[0],
-    article.split('## Common key-management scenarios\n')[1].split('\n## Decision tree')[0],
+    article.split('## Single KEK (key encryption key) scenarios\n')[1].split('\n## Dual KEK (key encryption key) scenarios')[0],
+    article.split('## Dual KEK (key encryption key) scenarios\n')[1].split('\n## Secrets and certificates patterns')[0],
   ];
   const scenarios = scenarioSections.flatMap(section => section.split('\n### ').slice(1)).map(section => {
     const [title, ...lines] = section.split('\n');
     const body = lines.join('\n').trim();
     const summary = '**Patterns you can use:**\n\n' + body.split('**Patterns you can use:**')[1].trim();
     return { title: title.replace(/ \{#[^}]+\}$/, ''), body, summary };
-  });
+  }).filter((scenario, index, scenarios) => scenarios.findIndex(other => other.title === scenario.title) === index);
   const linkedText = text => {
     const runs = [];
     for (const line of text.split('\n').filter(line => line.trim())) {
@@ -143,7 +143,7 @@ module.exports = (pres, L) => {
   };
   for (let offset = 0; offset < scenarios.length; offset += 3) {
     const s = L.slide('services');
-    L.header(s, '', `Common key-management scenarios (${offset / 3 + 1} of 3)`, { eyebrow: 'Service guides · Key Vault · Keys patterns', tw: 11.8 });
+    L.header(s, '', `Key-management scenarios (${offset / 3 + 1} of 3)`, { eyebrow: 'Service guides · Key Vault · Keys patterns', tw: 11.8 });
     scenarios.slice(offset, offset + 3).forEach(({ title, summary }, i) => {
       const x = 0.6 + i * 4.11;
       L.box(s, x, 1.5, 3.91, 5.2, { fill: C.wash });
