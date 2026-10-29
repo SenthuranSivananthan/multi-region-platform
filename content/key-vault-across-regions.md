@@ -7,25 +7,15 @@ ms.topic: conceptual
 
 # Key Vault across regions
 
-Key Vault is often a runtime dependency: an application can need keys, secrets, and certificates just to start. Recovering data in another region is not enough if its key cannot be reached. Start with regional behavior, compare the products and patterns, then check the consuming service's requirements.
+## TL;DR
 
-**Secrets and Certificates management patterns**
+- **Certificates and secrets:** Use [a Key Vault in each region](#secrets-certificates-pattern-1). Manage objects in each vault through deployment pipelines, with customer-managed application failover.
+- **Single KEK (key encryption key):** Use [Key Vault paired-region replication](#keys-pattern-1) with Microsoft-managed failover. The primary and paired vault regions do not need to match the consuming services' regions. Alternative: [Managed HSM with geo-replication](#keys-pattern-4).
+- **Dual KEK (key encryption key):** Use [a Key Vault in each region](#keys-pattern-2). Manage objects in each vault through deployment pipelines, with customer-managed application failover. Alternative: [Managed HSM with geo-replication](#keys-pattern-4).
 
-- [Pattern 1: Standard or Premium vault in each region](#secrets-certificates-pattern-1)
-- [Pattern 2: Standard or Premium vault in a paired region](#secrets-certificates-pattern-2)
+<a id="failover-guidance"></a>
 
-**Key management patterns**
-
-- [Pattern 1: Standard or Premium vault with paired-region replication](#keys-pattern-1)
-- [Pattern 2: Standard or Premium vault in each region](#keys-pattern-2)
-- [Pattern 3: Premium vault per region with external HSM and BYOK](#keys-pattern-3)
-- [Pattern 4: Managed HSM with geo-replication](#keys-pattern-4)
-- [Pattern 5: Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5)
-- [Pattern 6: Managed HSM with external key management](#keys-pattern-6)
-
-## Failover Guidance
-
-### Microsoft-managed failover for Azure Key Vault Standard or Premium
+## Microsoft-managed failover for Azure Key Vault Standard or Premium
 
 Keep using the same vault URI; Microsoft reroutes requests after failover. You cannot trigger this failover. Initiation can take hours or longer, independently of other services. Asynchronous replication means recent changes can be lost.
 
@@ -40,7 +30,7 @@ Keep using the same vault URI; Microsoft reroutes requests after failover. You c
 | Nonreciprocal (asymmetric) region pairing | [Unsupported](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region) | Region A is paired with Region B, but Region B is paired with another region or has no pair. A one-way pairing does not qualify. |
 | Regions without a pair | [Unsupported](https://learn.microsoft.com/azure/reliability/reliability-key-vault#microsoft-managed-failover-to-a-paired-region) | The primary region has no paired region for Microsoft-managed failover. |
 
-### Microsoft-managed failover for Azure Key Vault Managed HSM
+## Microsoft-managed failover for Azure Key Vault Managed HSM
 
 Managed HSM resources are deployed into a single Azure region. If the region becomes unavailable, your Managed HSM is also unavailable. Managed HSM supports [multiregion replication](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication), which you can use to extend a Managed HSM pool from one Azure region (the *primary region*) to a second Azure region (the *extended region*).
 
@@ -63,7 +53,7 @@ For reliability details, see [Reliability in Azure Key Vault Managed HSM](https:
 | Unsupported extended region | Unsupported | Check [Azure region support](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication#azure-region-support) before selecting the extended region. |
 | Managed HSM with External Key Management (EKM) | Unsupported | [Multiregion replication](https://learn.microsoft.com/azure/key-vault/managed-hsm/multi-region-replication) isn't supported with external keys, so there is no geo-replicated failover target. |
 
-### Customer-managed failover
+## Customer-managed failover
 
 Consider customer-controlled failover design patterns when Microsoft-managed failover does not meet your application's recovery time objectives (RTOs). These patterns let you choose regions for your workloads, subject to product availability, supported extended regions, and consuming-service requirements.
 
