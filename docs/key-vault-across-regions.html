@@ -207,16 +207,19 @@
 <th scope="col">Product</th>
 <th scope="col">Regional deployment and recovery</th>
 <th scope="col">Artifact provisioning</th>
+<th scope="col">Failover behaviour</th>
 </tr>
 </thead>
 <tbody>
-<tr><th scope="row">Key Vault Standard or Premium</th>
-<td>Create a <a href="#secrets-certificates-pattern-1">vault in each workload region</a>; each surviving region retains local read and write access.</td>
-<td>Populate certificates and secrets in each vault through an automation pipeline. If you manage an on-premises HSM, consider <a href="#keys-pattern-3">BYOK into a Premium vault in each region</a> using HSM-generated keys. HSM-backed BYOK requires Premium, not Standard.</td>
+<tr><th scope="row">Key Vault Standard or Premium (Keys, Secrets, Certificates)</th>
+<td><ul><li>One <a href="#secrets-certificates-pattern-1">vault per region</a>.</li><li>Local read/write access.</li></ul></td>
+<td><ul><li>Use an automation pipeline for secrets and certificates.</li><li>With an on-premises HSM, consider <a href="#keys-pattern-3">BYOK into each Premium vault</a>.</li><li>HSM-backed BYOK requires Premium, not Standard.</li></ul></td>
+<td><ul><li>Use SDK retries with exponential backoff and respect DNS TTL.</li><li>Design application fallback to the recovery region to meet your RTO.</li><li>Test connectivity regularly.</li></ul></td>
 </tr>
-<tr><th scope="row">Key Vault Managed HSM</th>
-<td>Recommended: enable <a href="#keys-pattern-4">geo-replication</a> to a supported extended region so both regions support reads and writes. Changes in either region replicate asynchronously to the other. Microsoft manages routing and failover.</td>
-<td>Keys only. Generate keys in Managed HSM, or generate them in your on-premises HSM and <a href="#keys-pattern-5">import them using BYOK</a>. Imported keys then replicate to the extended region.</td>
+<tr><th scope="row">Key Vault Managed HSM (Keys)</th>
+<td><ul><li>Enable <a href="#keys-pattern-4">geo-replication</a> to a supported extended region.</li><li>Both regions support read/write, with asynchronous replication in either direction.</li><li>Microsoft manages routing and failover.</li></ul></td>
+<td><ul><li>Keys only.</li><li>Generate in Managed HSM or <a href="#keys-pattern-5">import from your on-premises HSM using BYOK</a>, then replicate.</li></ul></td>
+<td><ul><li>Use SDK retries with exponential backoff and respect DNS TTL.</li><li>Reads and writes continue if either region fails.</li><li>DNS routes to the closest available region (5-second TTL); caching can delay failover.</li><li>Replication: Key and role changes can take up to 6 minutes; regions may differ during this window.</li><li>External keys (EKM) cannot be geo-replicated.</li></ul></td>
 </tr>
 </tbody>
 </table></div>

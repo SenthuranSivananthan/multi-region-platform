@@ -158,18 +158,39 @@ class KeyVaultLayoutTests(unittest.TestCase):
         table = re.search(r"<table>.*?</table>", customer, re.S).group(0)
         rows = re.findall(r"<tr>.*?</tr>", table, re.S)
         self.assertEqual(len(rows), 3)
-        for condition in ("Key Vault Standard or Premium", 'href="#secrets-certificates-pattern-1"',
+        self.assertEqual(len(re.findall(r"<th\b", rows[0])), 4)
+        self.assertIn("Failover behaviour", rows[0])
+        self.assertNotRegex(table, r"<(?:strong|b)\b")
+        for row in rows[1:]:
+            cells = re.findall(r"<td\b[^>]*>.*?</td>", row, re.S)
+            self.assertEqual(len(cells), 4)
+            for cell in cells[1:]:
+                self.assertIn("<ul>", cell)
+                self.assertIn("<li>", cell)
+                self.assertNotIn("<br", cell)
+            self.assertIn("Use SDK retries with exponential backoff and respect DNS TTL.", cells[3])
+        for condition in ("Key Vault Standard or Premium (Keys, Secrets, Certificates)", 'href="#secrets-certificates-pattern-1"',
                           "automation pipeline", "on-premises HSM", 'href="#keys-pattern-3"',
-                          "HSM-backed BYOK requires Premium, not Standard"):
+                          "HSM-backed BYOK requires Premium, not Standard",
+                          "application fallback to the recovery region",
+                          "meet your RTO", "Test connectivity regularly"):
             with self.subTest(condition=condition):
                 self.assertIn(condition, rows[1])
-        for condition in ("Key Vault Managed HSM", "Keys only", 'href="#keys-pattern-4"',
-                          "supported extended region", "both regions support reads and writes",
-                          "Changes in either region replicate asynchronously to the other",
+        for condition in ("Key Vault Managed HSM (Keys)", "Keys only", 'href="#keys-pattern-4"',
+                          "supported extended region", "Both regions support read/write",
+                          "asynchronous replication in either direction",
                           "Microsoft manages routing and failover", "on-premises HSM",
-                          'href="#keys-pattern-5"', "Imported keys then replicate"):
+                          'href="#keys-pattern-5"', "then replicate"):
             with self.subTest(condition=condition):
                 self.assertIn(condition, rows[2])
+        managed_hsm_failover = re.findall(r"<td\b[^>]*>.*?</td>", rows[2], re.S)[3]
+        for condition in ("Reads and writes continue if either region fails.",
+                          "DNS routes to the closest available region (5-second TTL); caching can delay failover.",
+                          "Replication:", "Key and role changes can take up to 6 minutes",
+                          "regions may differ during this window.",
+                          "External keys (EKM) cannot be geo-replicated."):
+            with self.subTest(condition=condition):
+                self.assertIn(condition, managed_hsm_failover)
 
     def test_pdf_failover_summaries_cover_regional_conditions(self):
         self.assertIn("dual KEK", keyvault.page1())
