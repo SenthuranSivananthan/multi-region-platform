@@ -69,7 +69,69 @@ Consider customer-controlled failover design patterns when Microsoft-managed fai
 | Key Vault Standard or Premium (Keys, Secrets, Certificates) | <ul><li>One [vault per region](#secrets-certificates-pattern-1).</li><li>Local read/write access.</li></ul> | <ul><li>Use an automation pipeline for secrets and certificates.</li><li>With an on-premises HSM, consider [BYOK into each Premium vault](#keys-pattern-3).</li><li>HSM-backed BYOK requires Premium, not Standard.</li></ul> | <ul><li>Use SDK retries with exponential backoff and respect DNS TTL.</li><li>Design application fallback to the recovery region to meet your RTO.</li><li>Test connectivity regularly.</li></ul> |
 | Key Vault Managed HSM (Keys) | <ul><li>Enable [geo-replication](#keys-pattern-4) to a supported extended region.</li><li>Both regions support read/write, with asynchronous replication in either direction.</li><li>Microsoft manages routing and failover.</li></ul> | <ul><li>Keys only.</li><li>Generate in Managed HSM or [import from your on-premises HSM using BYOK](#keys-pattern-5), then replicate.</li></ul> | <ul><li>Use SDK retries with exponential backoff and respect DNS TTL.</li><li>Reads and writes continue if either region fails.</li><li>DNS routes to the closest available region (5-second TTL); caching can delay failover.</li><li>Replication: Key and role changes can take up to 6 minutes; regions may differ during this window.</li><li>External keys (EKM) cannot be geo-replicated.</li></ul> |
 
-## Secrets and certificates management patterns {#secrets-and-certificates}
+## Secrets and certificates scenarios
+
+### Application-level secrets or certificates
+
+Your workload decides whether each region uses independent secrets and certificates or shares common ones. It uses the Key Vault in its own region and can optionally fail over to secrets and certificates in a recovery region if its primary region is unavailable.
+
+**Patterns you can use:**
+
+- [Standard or Premium vault in each region](#secrets-certificates-pattern-1).
+
+## Single KEK (key encryption key) scenarios
+
+A single KEK design uses a shared key encryption key to protect the data encryption keys (DEKs) for the same data across regions, rather than a different KEK in each region. The DEKs encrypt the data; the KEK wraps and unwraps those DEKs. Recovery requires access to the original key material and any historical versions used by existing data or backups.
+
+> [!IMPORTANT]
+> Key Vault regions can be selected independently of the consuming services' regions. For Standard or Premium vaults, choose a region with a reciprocal region pair in the same Azure geography. This enables Microsoft-managed failover to the paired region for recovery during a regional outage. Failover remains best effort, without a guaranteed recovery time.
+
+### Azure Storage - Geo-redundant storage (GRS) {#azure-storage-grs}
+
+GRS copies are replicas of one storage account, not independently configured accounts. Both depend on that account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See [Storage CMKs](https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview).
+
+**Patterns you can use:**
+
+- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
+- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
+
+### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication {#database-geo-replication}
+
+SQL Database and SQL Managed Instance need the required TDE protector keys available to their replicas. See [SQL customer-managed TDE](https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview) and [Cosmos DB CMKs](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys).
+
+**Patterns you can use:**
+
+- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
+- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
+
+### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore {#database-geo-restore}
+
+Restoring data does not restore access to its encryption keys. Retain all historical keys required by the backup, authorize the restored service, and verify the target region/geography against that service's restore rules.
+
+> [!IMPORTANT]
+> Geo-restore is not possible for Microsoft-managed key (MMK) or Customer-managed key (CMK) scenarios when using paired regions in different geographies.
+
+**Patterns you can use:**
+
+- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
+- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
+
+### Purview Information Protection
+
+- Non-exportable keys, inability to re-encrypt old content at scale.
+- Customers can import an on-premises HSM key for use in Microsoft 365, but only by first transferring it into an Azure Key Vault (or Azure Key Vault Managed HSM). There is no direct, real-time use of an on-prem HSM by Microsoft 365 services. [See supported HSMs](https://learn.microsoft.com/en-us/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli). When using BYOK, customer becomes fully responsible for key generation, rotation, and protection. Improper key rotation or accidental deletion of keys can irreversibly lock the customer out of their data. For example, deleting or disabling a key that is still in use will make any data it protected permanently inaccessible, even Microsoft cannot recover it without the key.
+- All encryption operations depend on the Azure Key Vault. If the key vault (or managed HSM) experiences downtime or is unreachable, critical services (like Exchange Online, SharePoint, OneDrive, Teams, etc.) may become unable to decrypt or encrypt data, leading to potential service disruption.
+
+> [!IMPORTANT]
+> Default to Microsoft-managed keys unless regulation clearly requires customer control; where customer-managed keys are mandatory, create and preserve keys outside the primary geography and validate recovery design before production rollout.
+
+**Patterns you can use:**
+
+- [Standard or Premium vault with paired-region replication](#keys-pattern-1), using Premium: the documented HSM-backed vault option; preserve keys for old content. If you manage your own on-premises HSM, we recommend BYOK with a Premium vault. Review [How to generate and transfer HSM-protected keys (BYOK)](https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli) for supported HSMs and key-transfer instructions.
+- [Managed HSM with geo-replication](#keys-pattern-4): a suitable solution for a shared, regionally replicated key store; configure key access and lifecycle for the specific Information Protection feature.
+- [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): a suitable solution when key material is created in an external HSM and imported into a replicated Managed HSM. Preserve keys for old content.
+
+## Secrets and certificates patterns {#secrets-and-certificates}
 
 Use a Standard or Premium vault in each region, populated through deployment pipelines. Managed HSM does not support secrets nor certificates.
 
@@ -189,16 +251,6 @@ Your application decides whether each region uses an independent key or a common
 - [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): use supported Managed HSM operations, including imported keys for BYOK.
 - **Conditional:** [Managed HSM with external key management](#keys-pattern-6), only for supported external-key operations.
 
-### Azure Storage - Geo-redundant storage (GRS) {#azure-storage-grs}
-
-GRS copies are replicas of one storage account, not independently configured accounts. Both depend on that account's CMK. Independent regional vaults do not let you assign a different key store to each GRS replica. Consider a replicated key store and test key access during account failover. See [Storage CMKs](https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview).
-
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.
-- **Conditional:** [Managed HSM with external key management](#keys-pattern-6): verify Storage CMK integration and proxy availability; plan external-dependency recovery with no external-key geo-replication.
-
 ### Azure Storage - Object replication for block blobs {#storage-object-replication}
 
 Source and destination are separate accounts, so their CMK configuration can be independent. Validate each account's identity, key versions, and recovery behavior. Do not carry GRS's shared-account constraint into this topology. See [object replication](https://learn.microsoft.com/azure/storage/blobs/object-replication-overview).
@@ -241,40 +293,6 @@ Distinguish read replicas, geo-redundant backups, and geo-restore. Their key, re
 - [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): meet regional key and identity requirements; for BYOK, validate key import for the recovery feature.
 - [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): confirm Managed HSM support and regional requirements for that feature, including BYOK import where used.
 - [Managed HSM with external key management](#keys-pattern-6): verify the service's external-key CMK integration and the recovery feature separately.
-
-### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication {#database-geo-replication}
-
-SQL Database and SQL Managed Instance need the required TDE protector keys available to their replicas. Documented SQL designs can use regional copies of key material; rotation must preserve access to every required version. Cosmos DB uses an account-level CMK dependency and has its own networking and key-store requirements. Do not assume SQL's key-copy design applies to Cosmos DB. Replicated Managed HSM is a candidate where supported; compare its cost with the accepted risk of Microsoft-managed vault recovery, not an arbitrary number-of-keys threshold. See [SQL customer-managed TDE](https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview) and [Cosmos DB CMKs](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys).
-
-**Patterns you can use:**
-
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): candidates for supported shared-key dependencies; with BYOK, manage the imported-key lifecycle.
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): accept the Microsoft-managed recovery risk and preserve replica key access.
-- [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): only with a documented service-specific key-copy and rotation design, not as a general shared-key solution.
-- [Managed HSM with external key management](#keys-pattern-6): verify the exact integration; external keys have no geo-replicated failover target.
-
-### Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore {#database-geo-restore}
-
-Restoring data does not restore access to its encryption keys. Retain all historical keys required by the backup, authorize the restored service, and verify the target region/geography against that service's restore rules. A fresh key in a new vault is not a substitute. There is no single cross-geography rule that can safely represent every SQL and Cosmos DB restore feature. See the [SQL recovery requirements](https://learn.microsoft.com/azure/azure-sql/database/transparent-data-encryption-byok-overview#backup-and-restore-considerations) and the [Cosmos DB CMK requirements](https://learn.microsoft.com/azure/cosmos-db/how-to-setup-customer-managed-keys).
-
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1): the restore target must retain access to the original keys.
-- [Standard or Premium vault in each region](#keys-pattern-2) or [Premium vault per region with external HSM and BYOK](#keys-pattern-3): preserve the required key material and versions; newly generated regional keys cannot replace them.
-- [Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): verify service restore support and historical key availability.
-- [Managed HSM with external key management](#keys-pattern-6): retain the original external key and reference; external-key backup/restore is not supported.
-
-### Purview Information Protection
-
-Identify whether the requirement concerns an Azure Rights Management tenant key, Microsoft 365 Customer Key, or another protection feature. These are not interchangeable integrations. For tenant-key BYOK, the documented Premium-vault approach imports an external HSM key into Azure; it is not direct real-time use of an on-premises HSM. Preserve keys that protect old content and test recovery before production. Consider Microsoft-managed keys unless customer control is required. See [Rights Management BYOK](https://learn.microsoft.com/purview/rights-management-byok).
-
-**Patterns you can use:**
-
-- [Standard or Premium vault with paired-region replication](#keys-pattern-1), using Premium: the documented HSM-backed vault option; preserve keys for old content. If you manage your own on-premises HSM, we recommend BYOK with a Premium vault. Review [How to generate and transfer HSM-protected keys (BYOK)](https://learn.microsoft.com/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli) for supported HSMs and key-transfer instructions.
-- [Managed HSM with geo-replication](#keys-pattern-4): a suitable solution for a shared, regionally replicated key store; configure key access and lifecycle for the specific Information Protection feature.
-- [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): a suitable solution when key material is created in an external HSM and imported into a replicated Managed HSM. Preserve keys for old content.
-
-**External key management requires feature-specific confirmation:** [Managed HSM with external key management](#keys-pattern-6) keeps key material outside Microsoft infrastructure rather than importing it into Azure. Confirm the exact feature's integration, key lifecycle, and supported external-key operations. An independent-vault workload stamp is not applicable to this tenant-level service.
 
 ## Decision tree
 

@@ -92,6 +92,41 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertIn("Register key reference only", keyvault.d_k6())
         self.assertIn("No key material is imported or geo-replicated", keyvault.d_k6())
 
+    def test_application_secrets_scenario_precedes_single_kek_scenarios(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        store = []
+        result = site_build.postprocess(site_build.expand_raw(site_build.render_md(body, store), store))
+        heading = '<h2 id="secrets-and-certificates-scenarios">'
+        single = '<h2 id="single-kek-key-encryption-key-scenarios">'
+        self.assertEqual(result.count(heading), 1)
+        self.assertLess(result.index(heading), result.index(single))
+        scenario = result.split(heading, 1)[1].split(single, 1)[0]
+        self.assertIn('<h3 id="application-level-secrets-or-certificates">', scenario)
+        self.assertIn("<strong>Patterns you can use:</strong>", scenario)
+        self.assertIn('<a href="#secrets-certificates-pattern-1">Standard or Premium vault in each region</a>', scenario)
+        for condition in ("independent secrets and certificates", "shares common ones",
+                          "Key Vault in its own region", "optionally fail over",
+                          "recovery region", "if its primary region is unavailable"):
+            self.assertIn(condition, scenario)
+
+    def test_single_kek_description_explains_shared_key_and_recovery(self):
+        _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
+        description = body.split("## Single KEK (key encryption key) scenarios\n", 1)[1].split("\n### ", 1)[0]
+        self.assertIn("> [!IMPORTANT]\n> Key Vault regions can be selected independently", description)
+        self.assertLess(description.index("Recovery requires"), description.index("> [!IMPORTANT]"))
+        self.assertEqual(body.count("Key Vault regions can be selected independently of the consuming services' regions."), 1)
+        important = description.split("> [!IMPORTANT]\n", 1)[1]
+        for condition in ("Standard or Premium vaults", "reciprocal region pair",
+                          "same Azure geography", "Microsoft-managed failover to the paired region",
+                          "recovery during a regional outage", "best effort",
+                          "without a guaranteed recovery time"):
+            self.assertIn(condition, important)
+        for condition in ("shared key encryption key", "data encryption keys (DEKs)",
+                          "DEKs encrypt the data", "KEK wraps and unwraps",
+                          "original key material", "historical versions"):
+            self.assertIn(condition, description)
+        self.assertNotIn("The key can be replicated or copied", description)
+
     def test_scenarios_use_linked_pattern_lists_instead_of_a_matrix(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
         store = []
@@ -100,7 +135,16 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertNotIn('id="paired-and-nonpaired-regions"', result)
         self.assertLess(result.index('id="failover-guidance"'), result.index("<table>"))
         start = result.index('id="common-key-management-scenarios"')
-        scenarios = result[start:].split('<h2 id="decision-tree">')[0]
+        common = result[start:].split('<h2 id="decision-tree">')[0]
+        single = result.split('<h2 id="single-kek-key-encryption-key-scenarios">', 1)[1].split('<h2 id="secrets-and-certificates">', 1)[0]
+        self.assertEqual(len(re.findall(r"<h3\b", single)), 4)
+        self.assertEqual(len(re.findall(r"<h3\b", common)), 5)
+        for anchor in ("azure-storage-grs", "database-geo-replication", "database-geo-restore",
+                       "purview-information-protection"):
+            self.assertIn(f'<h3 id="{anchor}">', single)
+            self.assertNotIn(f'<h3 id="{anchor}">', common)
+            self.assertEqual(result.count(f'<h3 id="{anchor}">'), 1)
+        scenarios = single + common
         self.assertNotIn("<table>", scenarios)
         sections = re.split(r"<h3\b", scenarios)[1:]
         self.assertEqual(len(sections), 9)
@@ -113,6 +157,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         grs = next(section for section in sections if section.startswith(' id="azure-storage-grs"'))
         self.assertNotIn('href="#keys-pattern-2"', grs)
         self.assertNotIn('href="#keys-pattern-3"', grs)
+        self.assertNotIn('href="#keys-pattern-6"', grs)
         for target, label in re.findall(r'<a href="#(keys-pattern-[1-6])">([^<]+)</a>', scenarios):
             title = re.search(rf'<h3 id="{target}">Pattern [1-6]: (.*?)<a class="anchor"', result).group(1)
             self.assertEqual(label, title)
@@ -122,8 +167,11 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertIn('>Standard or Premium vault with paired-region replication</a>', keys_header)
         self.assertIn('class="table-wrap kv-table kv-wide"', result)
         self.assertEqual(keys_header.count('<th scope="col">'), 7)
-        self.assertIn('<h2 id="secrets-and-certificates">Secrets and certificates management patterns', result)
+        self.assertIn('<h2 id="secrets-and-certificates">Secrets and certificates patterns', result)
         self.assertIn('<h2 id="keys">Keys management patterns', result)
+        self.assertLess(result.index('<h2 id="single-kek-key-encryption-key-scenarios">'),
+                        result.index('<h2 id="secrets-and-certificates">'))
+        self.assertLess(result.index('<h2 id="secrets-and-certificates">'), result.index('<h2 id="keys">'))
         secrets = result.split('<h2 id="secrets-and-certificates">', 1)[1].split('<h2 id="keys">', 1)[0]
         self.assertNotIn("<table>", secrets)
         self.assertIn('id="secrets-certificates-pattern-1"', secrets)
@@ -163,7 +211,7 @@ class KeyVaultLayoutTests(unittest.TestCase):
         self.assertLess(standard, hsm)
         self.assertLess(hsm, customer_heading)
         guidance = body[body.index("## Microsoft-managed failover\n"):]
-        guidance = guidance.split("## Secrets and certificates management patterns", 1)[0]
+        guidance = guidance.split("## Secrets and certificates scenarios", 1)[0]
         microsoft, customer = guidance.split("## Customer-managed failover", 1)
         microsoft = microsoft.split("### Microsoft-managed failover for Azure Key Vault Standard or Premium", 1)[1]
         microsoft = microsoft.split("### Microsoft-managed failover for Azure Key Vault Managed HSM", 1)[0]
@@ -316,16 +364,20 @@ class KeyVaultLayoutTests(unittest.TestCase):
 
     def test_scenario_sections_preserve_removed_matrix_conditions(self):
         _, body = site_build.read_front_matter(ROOT / "content" / "key-vault-across-regions.md")
-        scenarios = body.split("## Common key-management scenarios", 1)[1].split("## Decision tree", 1)[0]
+        scenario_sections = (
+            body.split("## Single KEK (key encryption key) scenarios\n", 1)[1].split("\n## Secrets and certificates patterns", 1)[0],
+            body.split("## Common key-management scenarios", 1)[1].split("## Decision tree", 1)[0],
+        )
         sections = {re.sub(r" \{#[^}]+\}$", "", title): text
+                    for scenarios in scenario_sections
                     for title, text in re.findall(r"### ([^\n]+)\n(.*?)(?=\n### |\Z)", scenarios, re.S)}
         conditions = {
             "Application-level encryption": (
                 "software-protected", "HSM-protected", "independent regional keys",
                 "imported keys", "supported external-key operations", "restricted operation set"),
             "Azure Storage - Geo-redundant storage (GRS)": (
-                "Microsoft-managed vault recovery", "shared key", "proxy availability",
-                "no external-key geo-replication", "different key store to each GRS replica"),
+                "Microsoft-managed vault recovery", "shared key",
+                "different key store to each GRS replica"),
             "Azure Storage - Object replication for block blobs": (
                 "independent keys", "import and authorize", "each account's CMK integration",
                 "proxy and external HSM", "separate accounts"),
@@ -339,20 +391,38 @@ class KeyVaultLayoutTests(unittest.TestCase):
                 "product and recovery feature", "key and identity", "validate key import",
                 "Managed HSM support", "recovery feature separately", "geo-redundant backups"),
             "Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication": (
-                "shared-key dependencies", "Microsoft-managed recovery risk",
-                "key-copy and rotation design", "imported-key lifecycle",
-                "no geo-replicated failover target", "Cosmos DB"),
+                "maintain access to the shared key", "both data copies depend on Microsoft-managed vault recovery",
+                "Cosmos DB"),
             "Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore": (
-                "original keys", "newly generated regional keys cannot replace",
-                "historical key availability", "external-key backup/restore is not supported",
+                "both data copies depend on Microsoft-managed vault recovery",
+                "maintain access to the shared key",
                 "authorize the restored service"),
             "Purview Information Protection": (
                 "preserve keys for old content", "BYOK with a Premium vault",
                 "supported HSMs and key-transfer instructions",
-                "feature-specific confirmation", "external-key operations",
-                "not applicable", "Microsoft 365 Customer Key"),
+                "Non-exportable keys", "key generation, rotation, and protection",
+                "There is no direct, real-time use of an on-prem HSM",
+                "potential service disruption"),
         }
         self.assertEqual(set(sections), set(conditions))
+        geo_replication = sections["Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-replication"]
+        self.assertNotIn("> [!IMPORTANT]", geo_replication)
+        first_pattern = re.findall(r"^- (.+)$", geo_replication, re.M)[0]
+        self.assertEqual(first_pattern, "[Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.")
+        self.assertNotIn("(#keys-pattern-2)", geo_replication)
+        self.assertNotIn("(#keys-pattern-3)", geo_replication)
+        self.assertNotIn("(#keys-pattern-6)", geo_replication)
+        geo_restore = sections["Azure SQL Database, Azure SQL Managed Instance and Azure Cosmos DB geo-restore"]
+        self.assertEqual(re.findall(r"^- (.+)$", geo_restore, re.M), [
+            "[Standard or Premium vault with paired-region replication](#keys-pattern-1): both data copies depend on Microsoft-managed vault recovery.",
+            "[Managed HSM with geo-replication](#keys-pattern-4) or [Managed HSM geo-replication with external HSM and BYOK](#keys-pattern-5): maintain access to the shared key.",
+        ])
+        self.assertNotIn("(#keys-pattern-2)", geo_restore)
+        self.assertNotIn("(#keys-pattern-3)", geo_restore)
+        self.assertNotIn("(#keys-pattern-6)", geo_restore)
+        self.assertNotIn("A fresh key in a new vault is not a substitute.", geo_restore)
+        self.assertIn("> [!IMPORTANT]\n> Geo-restore is not possible for Microsoft-managed key (MMK) or Customer-managed key (CMK) scenarios when using paired regions in different geographies.", geo_restore)
+        self.assertLess(geo_restore.index("> [!IMPORTANT]"), geo_restore.index("**Patterns you can use:**"))
         for title, phrases in conditions.items():
             for phrase in phrases:
                 with self.subTest(scenario=title, condition=phrase):
@@ -390,16 +460,20 @@ class KeyVaultLayoutTests(unittest.TestCase):
                        "Premium does not improve regional recovery control", "Read-only",
                        "no key creation or rotation", "key-vault-keys-paired-region.png"):
             self.assertIn(phrase, pattern)
-        purview = body.split("### Purview Information Protection", 1)[1].split("## Decision tree", 1)[0]
+        purview = re.split(r"\n#{2,3} ", body.split("### Purview Information Protection\n", 1)[1], maxsplit=1)[0]
+        description = purview.split("> [!IMPORTANT]", 1)[0]
+        self.assertEqual(len(re.findall(r"^- ", description, re.M)), 3)
+        self.assertIn("[See supported HSMs](https://learn.microsoft.com/en-us/azure/key-vault/keys/hsm-protected-keys-byok?tabs=azure-cli)", description)
+        self.assertIn("> [!IMPORTANT]\n> Default to Microsoft-managed keys unless regulation clearly requires customer control; where customer-managed keys are mandatory, create and preserve keys outside the primary geography and validate recovery design before production rollout.", purview)
+        self.assertEqual(purview.count("Default to Microsoft-managed keys unless regulation clearly requires customer control;"), 1)
+        self.assertLess(purview.index("> [!IMPORTANT]"), purview.index("**Patterns you can use:**"))
         self.assertIn("(#keys-pattern-1), using Premium", purview)
         self.assertNotIn("Standard software-protected keys require feature-specific confirmation", purview)
         self.assertIn("BYOK with a Premium vault", purview)
-        suitable, conditional = purview.split("**External key management requires feature-specific confirmation:**", 1)
         for pattern in (4, 5):
-            self.assertIn(f"(#keys-pattern-{pattern})", suitable)
-            self.assertNotIn(f"(#keys-pattern-{pattern})", conditional)
-        self.assertIn("(#keys-pattern-6)", conditional)
-        self.assertNotIn("(#keys-pattern-6)", suitable)
+            self.assertIn(f"(#keys-pattern-{pattern})", purview)
+        self.assertNotIn("External key management requires feature-specific confirmation", purview)
+        self.assertNotIn("(#keys-pattern-6)", purview)
         self.assertIn("Standard: software / Premium: HSM", keyvault.d_k1())
 
     def test_standalone_figures_have_matching_export_sizes(self):
