@@ -14,7 +14,7 @@ ms.topic: conceptual
 - **Disaster recovery - across paired regions:** [Platform-native replication, account failover, and failback](#platform-native-geo-replication) are limited to Azure-assigned paired regions. Use GRS for eligible account-wide replication, or GZRS when zonal HA is also required. Read-access variants add eligible secondary reads during recovery. Plan and test potential data loss and recovery procedures; replication alone does not restore the workload.
 - **Disaster recovery - customer chosen regions:** Use [Blob Object Replication](#storage-pattern-2) for eligible block blobs, [customer-orchestrated copy](#storage-pattern-3) for supported Blob, ADLS Gen2, or Files datasets, and [customer-managed or partner replication](#storage-pattern-4) for service-specific needs, including Queues and Tables. For Databricks workloads, evaluate [workload-specific replication and recovery](#storage-pattern-5).
 - **Recovery from unwanted changes:** Complement regional DR with [isolated vaulted backup](#complement-replication-with-isolated-backup) where supported, accounting for backup frequency and restore duration. [Operational backup](#operational-backup-for-blobs) provides local logical recovery, not an independent regional recovery copy.
-- **Match protection to criticality:** Use the [HA](#high-availability-scenarios) and [DR](#disaster-recovery-scenarios) tier tables as planning candidates, not guarantees. Validate RTO, RPO, application dependencies, endpoint redirection, and recovery procedures; asynchronous replication and scheduled backups do not establish near-zero regional RPO.
+- **Match protection to criticality:** Use the [HA](#high-availability-scenarios) and [DR](#disaster-recovery-scenarios) tier tables as planning candidates, not guarantees. Validate RTO, RPO, [endpoints, DNS, key dependencies, and cost](#design-consideration), and recovery procedures; asynchronous replication and scheduled backups do not establish near-zero regional RPO.
 
 <a id="paired-region-options"></a>
 
@@ -210,6 +210,43 @@ Evaluate partner solutions against the following criteria:
 - **Cost and scale:** Include licensing, storage, transfer, compute, monitoring, testing, and operations.
 
 Before production adoption, validate the solution through workload-representative performance testing and disaster recovery exercises. Confirm that recovery procedures address application dependencies, endpoint redirection, write enablement, data consistency, and failback, not only data replication.
+
+## Design consideration
+
+### Endpoints and DNS during failover and failback
+
+Plan how each application connects to storage during normal operation, failover, and failback. The endpoint behavior depends on whether recovery uses the same storage account or a separate account.
+
+| Recovery model | Endpoint behavior | What to prepare |
+| --- | --- | --- |
+| **Geo-redundant account: GRS, GZRS, and read-access variants** | The account's primary service endpoint names stay the same during supported customer-managed or Microsoft-managed account failover. Azure updates DNS to route those endpoints to the new primary region. | Keep using the account's primary endpoint. Test DNS caching, retries, reconnection, and the return to the original region during failback. |
+| **Secondary reads: RA-GRS or RA-GZRS** | Read access uses a separate, read-only secondary endpoint. Asynchronous replication means its data can lag behind the primary. | Decide when the application should use secondary reads and what staleness it can tolerate. Do not send writes to the secondary endpoint. |
+| **Independent destination account** | The destination has its own account name and service endpoints. Replicating data does not redirect applications. | Define application configuration or DNS-based redirection, where supported. Test cutover to the destination and the reverse process during failback. |
+
+For every model, validate private endpoints, private DNS resolution, network access, and application permissions from the recovery region. An unchanged hostname does not mean uninterrupted access. See [Storage account failover and failback](https://learn.microsoft.com/azure/storage/common/storage-disaster-recovery-guidance) and [customer-managed unplanned failover](https://learn.microsoft.com/azure/storage/common/storage-failover-customer-managed-unplanned).
+
+### Key management and customer-managed keys
+
+When storage uses [customer-managed keys (CMKs)](https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview), access to protected data depends on Azure Storage being able to use the configured key in Azure Key Vault or Managed HSM. Replication and backup do not automatically create an independently recoverable key-management design.
+
+- **One geo-redundant account:** Primary and secondary replicas share the account's CMK configuration. Plan availability and recovery for the configured key store, including its replication where supported. Storage failover does not trigger key-store failover.
+- **Independent accounts:** With Blob Object Replication or copy tools such as Storage Mover, each account has its own encryption configuration and can use a different key and key store. Configure the destination account's managed identity, key permissions, and key versions; copying data does not copy these settings.
+- **Backup and restore:** Identify which source-account, backup-vault, and restore-target keys the selected backup service requires. Preserve required key versions and permissions for as long as recovery depends on them, and test a restore during a regional outage.
+
+The storage account and its key vault or Managed HSM can be in different regions; destination keys are not required to be stored in the destination account's region. Choose key placement and recovery independently, subject to each service's support. Storage and key-store recovery are separate dependencies, so recovery credentials, procedures, and key-recovery material must remain accessible without first restoring the protected storage account. See the [Key Vault guidance for Azure Storage CMKs](./key-vault-across-regions.md#azure-storage-grs).
+
+CMKs also provide control over rotation, access, and revocation for security and compliance. Enable the required soft delete and purge protection, document key lifecycle ownership, and avoid disabling or deleting keys still needed by storage or retained backups. These controls do not replace a tested key-availability and recovery plan.
+
+### Cost management
+
+Compare total operating and recovery cost, not just the price of storing a second copy. Include:
+
+- **Storage and protection:** Primary and secondary capacity, versions, snapshots, backup retention, and storage operations.
+- **Replication and transfer:** Geo-replication or copy charges, and any applicable cross-region network egress. Check the selected service and data path rather than assuming every transfer is billed the same way.
+- **Compute and orchestration:** VMs, Functions, Data Factory pipelines, integration runtimes, monitoring, and retries.
+- **Operations and recovery:** Engineering, support, failover and failback exercises, restore and rehydration charges where applicable, and partner licensing or implementation costs.
+
+For large Blob or ADLS Gen2 datasets, estimate both initial seeding and ongoing change volume. Model normal operation, a regional outage, and failback, including the cost of rebuilding replicas. Select the least complex approach that meets the workload's required RTO, RPO, security, and compliance needs, then review actual usage and cost as the workload grows.
 
 ## Reference links
 

@@ -102,7 +102,7 @@
   <main id="main">
     <div class="crumbs">Multi-region platform <span>/</span> Service Guides for Multi Region</div>
     <h1 class="title">Storage across regions</h1>
-    <p class="meta">November 2, 2026 · 20 min read</p>
+    <p class="meta">November 2, 2026 · 24 min read</p>
     <article class="prose">
 <h2 id="summary">Summary<a class="anchor" href="#summary" aria-label="Link to this section">#</a></h2>
 <ul>
@@ -111,7 +111,7 @@
 <li><strong>Disaster recovery - across paired regions:</strong> <a href="#platform-native-geo-replication">Platform-native replication, account failover, and failback</a> are limited to Azure-assigned paired regions. Use GRS for eligible account-wide replication, or GZRS when zonal HA is also required. Read-access variants add eligible secondary reads during recovery. Plan and test potential data loss and recovery procedures; replication alone does not restore the workload.</li>
 <li><strong>Disaster recovery - customer chosen regions:</strong> Use <a href="#storage-pattern-2">Blob Object Replication</a> for eligible block blobs, <a href="#storage-pattern-3">customer-orchestrated copy</a> for supported Blob, ADLS Gen2, or Files datasets, and <a href="#storage-pattern-4">customer-managed or partner replication</a> for service-specific needs, including Queues and Tables. For Databricks workloads, evaluate <a href="#storage-pattern-5">workload-specific replication and recovery</a>.</li>
 <li><strong>Recovery from unwanted changes:</strong> Complement regional DR with <a href="#complement-replication-with-isolated-backup">isolated vaulted backup</a> where supported, accounting for backup frequency and restore duration. <a href="#operational-backup-for-blobs">Operational backup</a> provides local logical recovery, not an independent regional recovery copy.</li>
-<li><strong>Match protection to criticality:</strong> Use the <a href="#high-availability-scenarios">HA</a> and <a href="#disaster-recovery-scenarios">DR</a> tier tables as planning candidates, not guarantees. Validate RTO, RPO, application dependencies, endpoint redirection, and recovery procedures; asynchronous replication and scheduled backups do not establish near-zero regional RPO.</li>
+<li><strong>Match protection to criticality:</strong> Use the <a href="#high-availability-scenarios">HA</a> and <a href="#disaster-recovery-scenarios">DR</a> tier tables as planning candidates, not guarantees. Validate RTO, RPO, <a href="#design-consideration">endpoints, DNS, key dependencies, and cost</a>, and recovery procedures; asynchronous replication and scheduled backups do not establish near-zero regional RPO.</li>
 </ul>
 <p><a id="paired-region-options"></a></p>
 <h2 id="platform-native-geo-replication">Platform-native geo-replication<a class="anchor" href="#platform-native-geo-replication" aria-label="Link to this section">#</a></h2>
@@ -328,6 +328,54 @@
 <li><strong>Cost and scale:</strong> Include licensing, storage, transfer, compute, monitoring, testing, and operations.</li>
 </ul>
 <p>Before production adoption, validate the solution through workload-representative performance testing and disaster recovery exercises. Confirm that recovery procedures address application dependencies, endpoint redirection, write enablement, data consistency, and failback, not only data replication.</p>
+<h2 id="design-consideration">Design consideration<a class="anchor" href="#design-consideration" aria-label="Link to this section">#</a></h2>
+<h3 id="endpoints-and-dns-during-failover-and-failback">Endpoints and DNS during failover and failback<a class="anchor" href="#endpoints-and-dns-during-failover-and-failback" aria-label="Link to this section">#</a></h3>
+<p>Plan how each application connects to storage during normal operation, failover, and failback. The endpoint behavior depends on whether recovery uses the same storage account or a separate account.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Recovery model</th>
+<th>Endpoint behavior</th>
+<th>What to prepare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Geo-redundant account: GRS, GZRS, and read-access variants</strong></td>
+<td>The account's primary service endpoint names stay the same during supported customer-managed or Microsoft-managed account failover. Azure updates DNS to route those endpoints to the new primary region.</td>
+<td>Keep using the account's primary endpoint. Test DNS caching, retries, reconnection, and the return to the original region during failback.</td>
+</tr>
+<tr>
+<td><strong>Secondary reads: RA-GRS or RA-GZRS</strong></td>
+<td>Read access uses a separate, read-only secondary endpoint. Asynchronous replication means its data can lag behind the primary.</td>
+<td>Decide when the application should use secondary reads and what staleness it can tolerate. Do not send writes to the secondary endpoint.</td>
+</tr>
+<tr>
+<td><strong>Independent destination account</strong></td>
+<td>The destination has its own account name and service endpoints. Replicating data does not redirect applications.</td>
+<td>Define application configuration or DNS-based redirection, where supported. Test cutover to the destination and the reverse process during failback.</td>
+</tr>
+</tbody>
+</table></div>
+<p>For every model, validate private endpoints, private DNS resolution, network access, and application permissions from the recovery region. An unchanged hostname does not mean uninterrupted access. See <a href="https://learn.microsoft.com/azure/storage/common/storage-disaster-recovery-guidance" target="_blank" rel="noopener">Storage account failover and failback</a> and <a href="https://learn.microsoft.com/azure/storage/common/storage-failover-customer-managed-unplanned" target="_blank" rel="noopener">customer-managed unplanned failover</a>.</p>
+<h3 id="key-management-and-customer-managed-keys">Key management and customer-managed keys<a class="anchor" href="#key-management-and-customer-managed-keys" aria-label="Link to this section">#</a></h3>
+<p>When storage uses <a href="https://learn.microsoft.com/azure/storage/common/customer-managed-keys-overview" target="_blank" rel="noopener">customer-managed keys (CMKs)</a>, access to protected data depends on Azure Storage being able to use the configured key in Azure Key Vault or Managed HSM. Replication and backup do not automatically create an independently recoverable key-management design.</p>
+<ul>
+<li><strong>One geo-redundant account:</strong> Primary and secondary replicas share the account's CMK configuration. Plan availability and recovery for the configured key store, including its replication where supported. Storage failover does not trigger key-store failover.</li>
+<li><strong>Independent accounts:</strong> With Blob Object Replication or copy tools such as Storage Mover, each account has its own encryption configuration and can use a different key and key store. Configure the destination account's managed identity, key permissions, and key versions; copying data does not copy these settings.</li>
+<li><strong>Backup and restore:</strong> Identify which source-account, backup-vault, and restore-target keys the selected backup service requires. Preserve required key versions and permissions for as long as recovery depends on them, and test a restore during a regional outage.</li>
+</ul>
+<p>The storage account and its key vault or Managed HSM can be in different regions; destination keys are not required to be stored in the destination account's region. Choose key placement and recovery independently, subject to each service's support. Storage and key-store recovery are separate dependencies, so recovery credentials, procedures, and key-recovery material must remain accessible without first restoring the protected storage account. See the <a href="key-vault-across-regions.html#azure-storage-grs">Key Vault guidance for Azure Storage CMKs</a>.</p>
+<p>CMKs also provide control over rotation, access, and revocation for security and compliance. Enable the required soft delete and purge protection, document key lifecycle ownership, and avoid disabling or deleting keys still needed by storage or retained backups. These controls do not replace a tested key-availability and recovery plan.</p>
+<h3 id="cost-management">Cost management<a class="anchor" href="#cost-management" aria-label="Link to this section">#</a></h3>
+<p>Compare total operating and recovery cost, not just the price of storing a second copy. Include:</p>
+<ul>
+<li><strong>Storage and protection:</strong> Primary and secondary capacity, versions, snapshots, backup retention, and storage operations.</li>
+<li><strong>Replication and transfer:</strong> Geo-replication or copy charges, and any applicable cross-region network egress. Check the selected service and data path rather than assuming every transfer is billed the same way.</li>
+<li><strong>Compute and orchestration:</strong> VMs, Functions, Data Factory pipelines, integration runtimes, monitoring, and retries.</li>
+<li><strong>Operations and recovery:</strong> Engineering, support, failover and failback exercises, restore and rehydration charges where applicable, and partner licensing or implementation costs.</li>
+</ul>
+<p>For large Blob or ADLS Gen2 datasets, estimate both initial seeding and ongoing change volume. Model normal operation, a regional outage, and failback, including the cost of rebuilding replicas. Select the least complex approach that meets the workload's required RTO, RPO, security, and compliance needs, then review actual usage and cost as the workload grows.</p>
 <h2 id="reference-links">Reference links<a class="anchor" href="#reference-links" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><a href="https://learn.microsoft.com/azure/storage/common/storage-redundancy" target="_blank" rel="noopener">Azure Storage redundancy</a></li>
@@ -349,7 +397,7 @@
   <aside class="rail" aria-label="In this article">
     <div class="rail-in">
       <p class="rail-h">In this article</p>
-      <ul><li><a href="#summary">Summary</a></li><li><a href="#platform-native-geo-replication">Platform-native geo-replication</a></li><li><a href="#high-availability-scenarios">High Availability scenarios</a></li><li><a href="#disaster-recovery-scenarios">Disaster Recovery scenarios</a></li><li><a href="#replication-patterns">Replication patterns</a></li><li><a href="#azure-storage-partners">Azure Storage partners</a></li><li><a href="#reference-links">Reference links</a></li></ul>
+      <ul><li><a href="#summary">Summary</a></li><li><a href="#platform-native-geo-replication">Platform-native geo-replication</a></li><li><a href="#high-availability-scenarios">High Availability scenarios</a></li><li><a href="#disaster-recovery-scenarios">Disaster Recovery scenarios</a></li><li><a href="#replication-patterns">Replication patterns</a></li><li><a href="#azure-storage-partners">Azure Storage partners</a></li><li><a href="#design-consideration">Design consideration</a></li><li><a href="#reference-links">Reference links</a></li></ul>
     </div>
   </aside>
 </div>
