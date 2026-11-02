@@ -280,7 +280,7 @@
 </table></div>
 <h3 id="application-level-encryption-single-kek">Application-level encryption<a class="anchor" href="#application-level-encryption-single-kek" aria-label="Link to this section">#</a></h3>
 <ul>
-<li>Your application has constraints or requirements to use a single key encryption key, regardless of how many regions the application is deployed in.</li>
+<li>Application-level encryption commonly uses one shared KEK across regions, but this is a design choice, not a technical requirement. Because you control the encryption algorithm and key-management logic, you can also use a <a href="#dual-kek-key-encryption-key-scenarios">Dual KEK approach</a> with separate regional keys.</li>
 </ul>
 <h3 id="azure-storage-grs">Azure Storage - Geo-redundant storage (GRS)<a class="anchor" href="#azure-storage-grs" aria-label="Link to this section">#</a></h3>
 <ul>

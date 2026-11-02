@@ -102,7 +102,7 @@ Use one of these shared-key patterns for the scenarios below, subject to each se
 
 ### Application-level encryption {#application-level-encryption-single-kek}
 
-- Your application has constraints or requirements to use a single key encryption key, regardless of how many regions the application is deployed in.
+- Application-level encryption commonly uses one shared KEK across regions, but this is a design choice, not a technical requirement. Because you control the encryption algorithm and key-management logic, you can also use a [Dual KEK approach](#dual-kek-key-encryption-key-scenarios) with separate regional keys.
 
 ### Azure Storage - Geo-redundant storage (GRS) {#azure-storage-grs}
 
