@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360" role="img" aria-labelledby="title description" font-family="Segoe UI, Arial, sans-serif">
+  <title id="title">Geo-redundant storage: one logical account</title>
+  <desc id="description">Azure asynchronously replicates account data from a primary region to an assigned paired secondary region. Read access is optional and service-dependent; account failover and application recovery require separate validation.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 10 4 0 8Z" fill="#0F6CBD"/></marker>
+  </defs>
+  <rect width="900" height="360" rx="14" fill="#FFFFFF"/>
+  <text x="450" y="34" text-anchor="middle" font-size="21" font-weight="600" fill="#243A57">One logical storage account - GRS / GZRS</text>
+  <rect x="18" y="56" width="864" height="244" rx="14" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <rect x="40" y="82" width="300" height="194" rx="12" fill="#FFFFFF" stroke="#0F6CBD" stroke-width="2"/>
+  <text x="190" y="112" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Primary region</text>
+  <rect x="64" y="138" width="252" height="70" rx="10" fill="#E8F3FC"/>
+  <text x="190" y="166" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Account data</text>
+  <text x="190" y="190" text-anchor="middle" font-size="15" fill="#243A57">Eligible storage services</text>
+  <text x="190" y="245" text-anchor="middle" font-size="16" font-weight="600" fill="#0B6B38">Read + write</text>
+  <rect x="560" y="82" width="300" height="194" rx="12" fill="#FFFFFF" stroke="#0F6CBD" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="710" y="112" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Azure-assigned paired region</text>
+  <rect x="584" y="138" width="252" height="70" rx="10" fill="#E8F3FC"/>
+  <text x="710" y="166" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Secondary replica</text>
+  <text x="710" y="190" text-anchor="middle" font-size="15" fill="#243A57">Not an independent account</text>
+  <text x="710" y="237" text-anchor="middle" font-size="15" fill="#8A5A00">Secondary reads only with eligible</text>
+  <text x="710" y="257" text-anchor="middle" font-size="15" fill="#8A5A00">RA-GRS / RA-GZRS configuration</text>
+  <path d="M342 178H556" fill="none" stroke="#0F6CBD" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="450" y="143" text-anchor="middle" font-size="16" font-weight="600" fill="#0F548C">Asynchronous</text>
+  <text x="450" y="163" text-anchor="middle" font-size="16" fill="#0F548C">replication</text>
+  <text x="450" y="215" text-anchor="middle" font-size="15" fill="#5B6778">Azure-managed</text>
+  <text x="450" y="334" text-anchor="middle" font-size="15" fill="#243A57">Account failover + application recovery are separate from data replication.</text>
+</svg>

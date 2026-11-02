@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="370" viewBox="0 0 900 370" role="img" aria-labelledby="title description" font-family="Segoe UI, Arial, sans-serif">
+  <title id="title">Blob Object Replication across independent accounts</title>
+  <desc id="description">An Azure object replication policy copies selected block blobs between independent accounts in customer-selected regions. Customers redirect applications, enable destination writes, validate recovery, and configure failback.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 10 4 0 8Z" fill="#0F6CBD"/></marker>
+  </defs>
+  <rect width="900" height="370" rx="14" fill="#FFFFFF"/>
+  <text x="450" y="34" text-anchor="middle" font-size="21" font-weight="600" fill="#243A57">Selected block blobs - independent account endpoints</text>
+  <rect x="28" y="66" width="320" height="196" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <text x="188" y="98" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Source region</text>
+  <rect x="48" y="116" width="280" height="62" rx="10" fill="#E8F3FC" stroke="#0F6CBD"/>
+  <text x="188" y="142" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Source account</text>
+  <text x="188" y="164" text-anchor="middle" font-size="15" fill="#243A57">Selected containers / datasets</text>
+  <text x="188" y="211" text-anchor="middle" font-size="15" fill="#243A57">Change feed + blob versioning</text>
+  <text x="188" y="236" text-anchor="middle" font-size="15" font-weight="600" fill="#0B6B38">Application writes</text>
+  <rect x="552" y="66" width="320" height="196" rx="12" fill="#F0FAF8" stroke="#75BDB3" stroke-width="2"/>
+  <text x="712" y="98" text-anchor="middle" font-size="18" font-weight="600" fill="#065F55">Customer-selected region</text>
+  <rect x="572" y="116" width="280" height="62" rx="10" fill="#E3F3EF" stroke="#087F73"/>
+  <text x="712" y="142" text-anchor="middle" font-size="18" font-weight="600" fill="#065F55">Destination account</text>
+  <text x="712" y="164" text-anchor="middle" font-size="15" fill="#243A57">Blob versioning enabled</text>
+  <text x="712" y="211" text-anchor="middle" font-size="15" fill="#243A57">Replicated blobs can be read</text>
+  <text x="712" y="236" text-anchor="middle" font-size="15" fill="#8A5A00">Enable writes during recovery</text>
+  <path d="M350 175H548" fill="none" stroke="#0F6CBD" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="450" y="130" text-anchor="middle" font-size="16" font-weight="600" fill="#0F548C">Azure policy</text>
+  <text x="450" y="153" text-anchor="middle" font-size="15" fill="#0F548C">Asynchronous copy</text>
+  <text x="450" y="210" text-anchor="middle" font-size="15" fill="#5B6778">Block blobs only</text>
+  <rect x="28" y="290" width="844" height="56" rx="10" fill="#F2F4F7"/>
+  <text x="450" y="313" text-anchor="middle" font-size="16" font-weight="600" fill="#243A57">Customer-managed recovery</text>
+  <text x="450" y="335" text-anchor="middle" font-size="15" fill="#243A57">Redirect applications + enable writes + validate data + plan reverse replication</text>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420" role="img" aria-labelledby="title description" font-family="Segoe UI, Arial, sans-serif">
+  <title id="title">Customer-orchestrated copy: AzCopy example</title>
+  <desc id="description">Data flows directly between storage accounts using AzCopy server-to-server APIs. A customer-managed host submits and monitors copy jobs. Other copy services have service-specific execution and data paths.</desc>
+  <defs>
+    <marker id="data-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 10 4 0 8Z" fill="#0F6CBD"/></marker>
+    <marker id="control-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 10 4 0 8Z" fill="#5B6778"/></marker>
+  </defs>
+  <rect width="900" height="420" rx="14" fill="#FFFFFF"/>
+  <text x="450" y="34" text-anchor="middle" font-size="21" font-weight="600" fill="#243A57">AzCopy: separate the data path from the job host</text>
+  <rect x="28" y="66" width="300" height="150" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <text x="178" y="99" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Source region</text>
+  <text x="178" y="139" text-anchor="middle" font-size="20" font-weight="600" fill="#0B3A63">Source account</text>
+  <text x="178" y="168" text-anchor="middle" font-size="16" fill="#243A57">Blob / ADLS Gen2 / Files</text>
+  <text x="178" y="192" text-anchor="middle" font-size="15" fill="#5B6778">Initial seed + incremental runs</text>
+  <rect x="572" y="66" width="300" height="150" rx="12" fill="#F0FAF8" stroke="#75BDB3" stroke-width="2"/>
+  <text x="722" y="99" text-anchor="middle" font-size="18" font-weight="600" fill="#065F55">Customer-selected region</text>
+  <text x="722" y="139" text-anchor="middle" font-size="20" font-weight="600" fill="#065F55">Destination account</text>
+  <text x="722" y="168" text-anchor="middle" font-size="16" fill="#243A57">Last validated copy</text>
+  <text x="722" y="192" text-anchor="middle" font-size="15" fill="#5B6778">Independent recovery endpoint</text>
+  <path d="M330 148H568" fill="none" stroke="#0F6CBD" stroke-width="3" marker-end="url(#data-arrow)"/>
+  <text x="450" y="110" text-anchor="middle" font-size="16" font-weight="600" fill="#0F548C">Data: server-to-server</text>
+  <text x="450" y="133" text-anchor="middle" font-size="15" fill="#0F548C">Does not pass through host</text>
+  <rect x="290" y="278" width="320" height="68" rx="12" fill="#F2F4F7" stroke="#8794A5"/>
+  <text x="450" y="305" text-anchor="middle" font-size="18" font-weight="600" fill="#243A57">Customer-managed job host</text>
+  <text x="450" y="330" text-anchor="middle" font-size="15" fill="#243A57">Schedule, credentials, retries, validation</text>
+  <path d="M320 278 178 219" fill="none" stroke="#5B6778" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#control-arrow)"/>
+  <path d="M580 278 722 219" fill="none" stroke="#5B6778" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#control-arrow)"/>
+  <text x="450" y="250" text-anchor="middle" font-size="15" fill="#5B6778">Dashed: submit + monitor jobs</text>
+  <text x="450" y="380" text-anchor="middle" font-size="15" fill="#243A57">RPO depends on copy schedule, completion, and validation.</text>
+  <text x="450" y="403" text-anchor="middle" font-size="14" fill="#5B6778">Data Factory / Synapse and Storage Mover have service-specific execution and data paths.</text>
+</svg>

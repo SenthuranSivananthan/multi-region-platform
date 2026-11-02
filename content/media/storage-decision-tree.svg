@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="650" viewBox="0 0 900 650" role="img" aria-labelledby="title description" font-family="Segoe UI, Arial, sans-serif">
+  <title id="title">Select a candidate storage replication pattern</title>
+  <desc id="description">For eligible account-wide protection in an acceptable paired region, choose Pattern 1. Otherwise, for eligible block blobs using native asynchronous replication, choose Pattern 2. Otherwise, for supported Blob, ADLS Gen2, or Azure Files datasets compatible with scheduled copy RPO, choose Pattern 3. For Queue, Table, or other service-specific requirements, evaluate Pattern 4. Confirm protocol and metadata support and test end-to-end recovery.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 10 4 0 8Z" fill="#5B6778"/></marker>
+  </defs>
+  <rect width="900" height="650" rx="14" fill="#FFFFFF"/>
+  <text x="450" y="34" text-anchor="middle" font-size="21" font-weight="600" fill="#243A57">Start with object support + regional eligibility</text>
+  <rect x="28" y="66" width="420" height="86" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <text x="238" y="98" text-anchor="middle" font-size="17" font-weight="600" fill="#0B3A63">Eligible account-wide geo-replication?</text>
+  <text x="238" y="125" text-anchor="middle" font-size="16" fill="#243A57">Azure-assigned paired region acceptable?</text>
+  <path d="M450 109H550" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="500" y="96" text-anchor="middle" font-size="15" fill="#243A57">Yes</text>
+  <rect x="554" y="66" width="318" height="86" rx="12" fill="#E8F3FC" stroke="#0F6CBD" stroke-width="2"/>
+  <text x="713" y="98" text-anchor="middle" font-size="17" font-weight="600" fill="#0B3A63">Pattern 1</text>
+  <text x="713" y="125" text-anchor="middle" font-size="17" fill="#0B3A63">Geo-redundant storage</text>
+  <path d="M238 154V200" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="258" y="184" font-size="15" fill="#243A57">No</text>
+  <rect x="28" y="204" width="420" height="86" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <text x="238" y="236" text-anchor="middle" font-size="17" font-weight="600" fill="#0B3A63">Eligible block blobs?</text>
+  <text x="238" y="263" text-anchor="middle" font-size="16" fill="#243A57">Native asynchronous replication fits?</text>
+  <path d="M450 247H550" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="500" y="234" text-anchor="middle" font-size="15" fill="#243A57">Yes</text>
+  <rect x="554" y="204" width="318" height="86" rx="12" fill="#E3F3EF" stroke="#087F73" stroke-width="2"/>
+  <text x="713" y="236" text-anchor="middle" font-size="17" font-weight="600" fill="#065F55">Pattern 2</text>
+  <text x="713" y="263" text-anchor="middle" font-size="17" fill="#065F55">Blob Object Replication</text>
+  <path d="M238 292V338" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="258" y="322" font-size="15" fill="#243A57">No</text>
+  <rect x="28" y="342" width="420" height="86" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <text x="238" y="374" text-anchor="middle" font-size="17" font-weight="600" fill="#0B3A63">Blob / ADLS Gen2 / Files copy supported?</text>
+  <text x="238" y="401" text-anchor="middle" font-size="16" fill="#243A57">Scheduled copy meets RPO?</text>
+  <path d="M450 385H550" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="500" y="372" text-anchor="middle" font-size="15" fill="#243A57">Yes</text>
+  <rect x="554" y="342" width="318" height="86" rx="12" fill="#E3F3EF" stroke="#087F73" stroke-width="2"/>
+  <text x="713" y="374" text-anchor="middle" font-size="17" font-weight="600" fill="#065F55">Pattern 3</text>
+  <text x="713" y="401" text-anchor="middle" font-size="17" fill="#065F55">Customer-orchestrated copy</text>
+  <path d="M238 430V476" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="258" y="460" font-size="15" fill="#243A57">No</text>
+  <rect x="28" y="480" width="420" height="86" rx="12" fill="#F2F4F7" stroke="#8794A5" stroke-width="2"/>
+  <text x="238" y="512" text-anchor="middle" font-size="17" font-weight="600" fill="#243A57">Queue, Table, or service-specific needs</text>
+  <text x="238" y="539" text-anchor="middle" font-size="16" fill="#243A57">Evaluate implementation / partner support</text>
+  <path d="M450 523H550" fill="none" stroke="#5B6778" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="554" y="480" width="318" height="86" rx="12" fill="#F2F4F7" stroke="#8794A5" stroke-width="2"/>
+  <text x="713" y="512" text-anchor="middle" font-size="17" font-weight="600" fill="#243A57">Pattern 4</text>
+  <text x="713" y="539" text-anchor="middle" font-size="17" fill="#243A57">Customer-managed replication</text>
+  <text x="450" y="606" text-anchor="middle" font-size="15" fill="#243A57">Confirm protocol and metadata support. Add isolated backup where required.</text>
+  <text x="450" y="631" text-anchor="middle" font-size="15" font-weight="600" fill="#243A57">Every result requires end-to-end recovery and failback testing.</text>
+</svg>

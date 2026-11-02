@@ -11,7 +11,7 @@
     })(window, document, "clarity", "script", "yxw7tz5r2b");
 </script>
 <title>Storage across regions · Multi-region platform</title>
-<meta name="description" content="Paired-region and region-of-choice behavior for Azure Storage replication in multi-region workloads.">
+<meta name="description" content="Plan Azure Storage high availability and disaster recovery by criticality tier, compare supported objects, and choose an illustrated replication pattern.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F6CBD'/%3E%3Ccircle cx='11' cy='13' r='4' fill='%23fff'/%3E%3Ccircle cx='21' cy='13' r='4' fill='%23fff' opacity='.7'/%3E%3Ccircle cx='16' cy='21' r='4' fill='%23fff' opacity='.45'/%3E%3C/svg%3E">
 <script>try{var t=localStorage.getItem('mrp-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 <link rel="stylesheet" href="assets/figures.css">
@@ -102,26 +102,246 @@
   <main id="main">
     <div class="crumbs">Multi-region platform <span>/</span> Service Guides for Multi Region</div>
     <h1 class="title">Storage across regions</h1>
-    <p class="meta">October 15, 2026 · 1 min read</p>
+    <p class="meta">November 2, 2026 · 20 min read</p>
     <article class="prose">
-<p>Storage replication illustrates why regional qualification cannot stop at "the service exists in both regions."</p>
-<h2 id="paired-region-options">Paired-region options<a class="anchor" href="#paired-region-options" aria-label="Link to this section">#</a></h2>
+<h2 id="summary">Summary<a class="anchor" href="#summary" aria-label="Link to this section">#</a></h2>
 <ul>
-<li>Geo-redundant storage options such as GRS and GZRS replicate data asynchronously to the service-defined secondary region.</li>
-<li>Built-in geo-redundancy and failover behavior must be evaluated separately from workload-level recoverability.</li>
+<li><strong>High availability - within a region:</strong> Default to <a href="#high-availability-scenarios">ZRS</a> where supported for zonal read/write availability. Use the <a href="#replication-patterns">replication patterns</a> to evaluate additional options: GZRS for regional recovery, RA-GZRS for secondary reads, or customer-managed and partner replication for workload-specific control.</li>
+<li><strong>Disaster recovery - paired regions:</strong> <a href="#platform-native-geo-replication">Platform-native replication, account failover, and failback</a> are limited to Azure-assigned paired regions. Use GRS for eligible account-wide replication, or GZRS when zonal HA is also required. Read-access variants add eligible secondary reads during recovery. Plan and test potential data loss and recovery procedures; replication alone does not restore the workload.</li>
+<li><strong>Disaster recovery - customer chosen regions:</strong> Use <a href="#storage-pattern-2">Blob Object Replication</a> for eligible block blobs, <a href="#storage-pattern-3">customer-orchestrated copy</a> for supported Blob, ADLS Gen2, or Files datasets, and <a href="#storage-pattern-4">customer-managed or partner replication</a> for service-specific needs, including Queues and Tables. For Databricks workloads, evaluate <a href="#storage-pattern-5">workload-specific replication and recovery</a>.</li>
+<li><strong>Recovery from unwanted changes:</strong> Complement regional DR with <a href="#complement-replication-with-isolated-backup">isolated vaulted backup</a> where supported, accounting for backup frequency and restore duration. <a href="#operational-backup-for-blobs">Operational backup</a> provides local logical recovery, not an independent regional recovery copy.</li>
+<li><strong>Match protection to criticality:</strong> Use the <a href="#high-availability-scenarios">HA</a> and <a href="#disaster-recovery-scenarios">DR</a> tier tables as planning candidates, not guarantees. Validate RTO, RPO, application dependencies, endpoint redirection, and recovery procedures; asynchronous replication and scheduled backups do not establish near-zero regional RPO.</li>
 </ul>
-<h2 id="region-of-choice-options">Region-of-choice options<a class="anchor" href="#region-of-choice-options" aria-label="Link to this section">#</a></h2>
+<p><a id="paired-region-options"></a></p>
+<h2 id="platform-native-geo-replication">Platform-native geo-replication<a class="anchor" href="#platform-native-geo-replication" aria-label="Link to this section">#</a></h2>
+<p>GRS and GZRS asynchronously replicate an eligible storage account to the Azure-assigned paired region. The secondary is a replica of the same logical account, not an independently configured destination account. A region pair alone does not establish support: confirm account type, service, redundancy, and regional availability.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Storage-account-level failover and failback support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Paired regions</strong></td>
+<td><strong>Supported</strong> for customer-managed and Microsoft-managed failover and failback, subject to account, service, and feature eligibility. Includes Blob, ADLS Gen2, Files, Queues, and Tables.</td>
+</tr>
+<tr>
+<td><strong>Non-paired regions</strong></td>
+<td><strong>Not Supported</strong> for either customer-managed or Microsoft-managed storage-account-level failover and failback. Use independent accounts and a supported replication or copy pattern instead.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Microsoft-managed failover is a Microsoft-directed regional disaster action, not an operation customers can request for an individual storage account. Use customer-managed failover and failback to plan and test workload recovery.</p>
+<p>Read-access variants, RA-GRS and RA-GZRS, expose a separate secondary read endpoint for supported services. They do not make the secondary writable. Evaluate <a href="https://learn.microsoft.com/azure/storage/common/storage-disaster-recovery-guidance" target="_blank" rel="noopener">customer-managed planned and unplanned failover and failback</a> separately from replication; eligibility and recovery behavior vary.</p>
+<p><a id="high-availability"></a></p>
+<h2 id="high-availability-scenarios">High Availability scenarios<a class="anchor" href="#high-availability-scenarios" aria-label="Link to this section">#</a></h2>
+<p>For Azure Storage, <strong>high availability (HA)</strong> means keeping reads and writes available through routine infrastructure faults and availability-zone disruptions within a region.</p>
+<div class="alert note"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 3.2a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6ZM9 11.5H7V7.4h2Z"/></svg>Note</p><p><strong>Default to ZRS.</strong> Start with <strong>zone-redundant storage (ZRS)</strong> where supported: it synchronously replicates data across availability zones. GZRS combines this zonal foundation with asynchronous cross-region replication. Design cross-region continuity only after within-region HA is addressed. See <a href="https://learn.microsoft.com/azure/storage/common/storage-redundancy#zone-redundant-storage" target="_blank" rel="noopener">Data redundancy - Azure Storage</a>.</p>
+<p>The options below are organized by workload criticality tier to help you evaluate storage solutions in your own context. Assess each option against your business requirements, recovery objectives, supported storage services, cost, and operational capabilities; the tier alone does not determine the right solution. For further guidance, see <a href="https://learn.microsoft.com/azure/well-architected/design-guides/disaster-recovery" target="_blank" rel="noopener">Develop a disaster recovery plan for multi-region deployments</a>.</p></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Criticality tier</th>
+<th>Paired regions</th>
+<th>Customer chosen regions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tier 0 - Mission Critical</strong><br>RTO seconds / RPO near zero</td>
+<td><ul><li><a href="#geo-priority-eligibility">GZRS with Geo-Priority Replication</a> - combines zonal HA with prioritized paired-region replication where eligible; regional recovery still requires failover.</li><li><a href="#geo-priority-eligibility">RA-GZRS with Geo-Priority Replication</a> - adds eligible secondary reads to zonal HA and prioritized geo-replication, but not secondary writes.</li><li><a href="#storage-pattern-4">Workload-managed replication</a> - gives the application control over consistency and cutover; prove seconds-level RTO and near-zero RPO.</li></ul></td>
+<td><ul><li><a href="#priority-replication-eligibility">Blob Object Replication with Priority</a> - prioritizes selected block-blob copies for regional continuity; its eligible 15-minute replication SLA does not meet near-zero RPO.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - evaluate specialist replication and failover capabilities against the workload's seconds-level RTO and near-zero RPO.</li><li><a href="#storage-pattern-4">Workload-managed replication</a> - allows customer chosen regions and application-controlled consistency and cutover; validate the full Tier 0 recovery path.</li></ul></td>
+</tr>
+<tr>
+<td><strong>Tier 1 - Business Critical</strong><br>RTO / RPO minutes</td>
+<td><ul><li><a href="#geo-priority-eligibility">GZRS with Geo-Priority Replication</a> - combines zonal HA with prioritized regional replication where eligible; verify replication lag and failover against minutes-level targets.</li><li><a href="#geo-priority-eligibility">RA-GZRS with Geo-Priority Replication</a> - supports eligible secondary reads during primary-region disruption while write recovery follows the failover procedure.</li><li><a href="#storage-pattern-4">Workload-managed replication</a> - lets the application control change propagation and endpoint cutover to match its recovery objectives.</li></ul></td>
+<td><ul><li><a href="#priority-replication-eligibility">Blob Object Replication with Priority</a> - provides prioritized block-blob copies with an eligible 15-minute replication SLA; use only when that window fits the workload's RPO.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - offers service-specific replication and failover approaches; verify that the chosen solution meets minutes-level objectives.</li><li><a href="#storage-pattern-4">Workload-managed replication</a> - enables application-specific regional copies and cutover behavior when native options do not fit.</li></ul></td>
+</tr>
+<tr>
+<td><strong>Tier 2 - Business Operational</strong><br>RTO / RPO hours</td>
+<td><ul><li><a href="#storage-pattern-1">GZRS</a> - retains zonal HA and adds Azure-managed regional recovery when replication lag and failover fit the allowed recovery window.</li><li><a href="#storage-pattern-1">RA-GZRS</a> - adds eligible secondary read continuity while writes wait for regional recovery actions.</li></ul></td>
+<td><ul><li><a href="#storage-pattern-2">Blob Object Replication</a> - maintains an accessible copy of selected block blobs; measure replication lag and application cutover against hours-level targets.</li><li><a href="#storage-mover">Storage Mover</a> - supports batch seeding and refresh when the schedule fits the target; its 24-hour planning RPO must be validated.</li><li><a href="#azure-data-factory-synapse-pipelines">Data Factory</a> - schedules and monitors incremental copy workflows for supported datasets when job-based replication lag is acceptable.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - addresses service or operational requirements not covered by native tools; validate hours-level recovery and cost.</li><li><a href="#azcopy">AzCopy</a> - provides initial and incremental copies without a custom data-transfer engine; customers own scheduling, retries, and validation.</li></ul></td>
+</tr>
+<tr>
+<td><strong>Tier 3 - Administrative</strong><br>RTO hours-days / RPO hours</td>
+<td><ul><li><a href="#storage-pattern-1">GZRS</a> - combines zonal HA with an account-wide regional copy without customer-operated copy jobs.</li><li><a href="#storage-pattern-1">RA-GZRS</a> - adds eligible secondary reads when useful, while allowing a longer window for write recovery.</li></ul></td>
+<td><ul><li><a href="#storage-pattern-2">Blob Object Replication</a> - provides policy-based block-blob copies without a customer-run copy schedule; validate lag against the required RPO.</li><li><a href="#storage-mover">Storage Mover</a> - supports batch-oriented data movement when longer recovery windows are acceptable; validate the 24-hour planning RPO.</li><li><a href="#azure-data-factory-synapse-pipelines">Data Factory</a> - automates scheduled copy workflows when pipeline development and operations are justified.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - provides validated service-specific alternatives; balance required protection against licensing and operational overhead.</li><li><a href="#azcopy">AzCopy</a> - supports scripting-based scheduled copies when the workload can tolerate the copy interval and customer-managed recovery.</li></ul></td>
+</tr>
+</tbody>
+</table></div>
+<p><a id="disaster-recovery"></a></p>
+<h2 id="disaster-recovery-scenarios">Disaster Recovery scenarios<a class="anchor" href="#disaster-recovery-scenarios" aria-label="Link to this section">#</a></h2>
+<p>For Azure Storage, <strong>disaster recovery (DR)</strong> means restoring a usable data copy and application access after a regional outage, destructive change, or other major disruption. Regional DR typically involves cross-region replication, failover or endpoint redirection, recovery validation, and failback. Backup complements this by recovering a retained point in time; whether it can recover a regional outage depends on where recovery copies and supported restore targets are available.</p>
+<div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><p><a id="complement-replication-with-isolated-backup"></a></p>
+<p><strong>Complement replication with isolated backup</strong></p>
+<p>Azure Backup provides vaulted backup for <a href="https://learn.microsoft.com/azure/backup/azure-data-lake-storage-backup-overview" target="_blank" rel="noopener">ADLS Gen2</a> and <a href="https://learn.microsoft.com/azure/backup/blob-backup-overview" target="_blank" rel="noopener">Azure Blobs</a>. It provides an isolated, managed recovery copy with ransomware protection, administrative separation, long retention, and recovery to a retained point in time. This is a restore-based recovery option, not another live replication endpoint.</p>
+<p><a id="region-of-choice-backup-preview"></a></p>
+<p>Backup frequency determines the RPO, which is usually measured in hours or more. Recovery takes longer because data must be restored from the vault. The published <a href="https://learn.microsoft.com/azure/backup/azure-data-lake-storage-backup-support-matrix" target="_blank" rel="noopener">support matrix</a> requires the vault to be in the source account's region. Do not assume backup or recovery in arbitrary customer chosen regions; validate any separately offered preview and its terms before relying on it.</p>
+<p><a id="operational-backup-for-blobs"></a></p>
+<p><strong>Operational backup for blobs</strong></p>
+<p><a href="https://learn.microsoft.com/azure/backup/blob-backup-overview" target="_blank" rel="noopener">Operational backup</a> uses point-in-time restore, soft delete, change feed, and blob versioning to retain supported block-blob changes locally in the source account. It does not copy data into an isolated backup vault. Use it for supported accidental-deletion or corruption recovery, alongside the regional recovery pattern, not as a substitute for one. Validate restore scope, retained recovery points, and recovery duration.</p></div>
+<div class="alert note"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 3.2a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6ZM9 11.5H7V7.4h2Z"/></svg>Note</p><p>The options below are organized by workload criticality tier to help you evaluate storage solutions in your own context. Assess each option against your business requirements, recovery objectives, supported storage services, cost, and operational capabilities; the tier alone does not determine the right solution. For further guidance, see <a href="https://learn.microsoft.com/azure/well-architected/design-guides/disaster-recovery" target="_blank" rel="noopener">Develop a disaster recovery plan for multi-region deployments</a>.</p></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Criticality tier</th>
+<th>Paired regions</th>
+<th>Customer chosen regions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tier 0 - Mission Critical</strong><br>RTO seconds / RPO near zero</td>
+<td><ul><li><a href="#geo-priority-eligibility">GRS with Geo-Priority Replication</a> - prioritizes paired-region copies where eligible; asynchronous replication alone does not establish Tier 0 recovery.</li><li><a href="#geo-priority-eligibility">GZRS with Geo-Priority Replication</a> - combines zonal HA with prioritized regional copies; validate the full failover path against seconds-level RTO and near-zero RPO.</li><li><a href="#geo-priority-eligibility">RA-GZRS with Geo-Priority Replication</a> - adds eligible secondary reads during regional recovery; write access still requires failover.</li><li><a href="#complement-replication-with-isolated-backup">Azure Backup - Vaulted Backup for HNS and Blob</a> - isolates retained restore points for destructive changes; its 24-hour planning RPO complements, rather than meets, Tier 0 targets.</li><li><a href="#operational-backup-for-blobs">Azure Backup - Operational Backup for Blob</a> - recovers supported deletion or corruption locally, not a regional outage.</li></ul></td>
+<td><ul><li><a href="https://learn.microsoft.com/azure/databricks/admin/managed-disaster-recovery" target="_blank" rel="noopener">Azure Databricks Managed Disaster Recovery</a> - provides workload-specific recovery for supported Databricks workloads; validate scope and Tier 0 objectives.</li><li><a href="#region-of-choice-backup-preview">Azure Backup to customer chosen regions</a> - may address recovery-location requirements (<strong>Limited preview</strong>); validate restore-based recovery against Tier 0 objectives.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - evaluate specialist replication and failover for seconds-level RTO and near-zero RPO.</li></ul></td>
+</tr>
+<tr>
+<td><strong>Tier 1 - Business Critical</strong><br>RTO / RPO minutes</td>
+<td><ul><li><a href="#geo-priority-eligibility">GRS with Geo-Priority Replication</a> - prioritizes managed paired-region replication where eligible; measure lag and failover against minutes-level targets.</li><li><a href="#geo-priority-eligibility">GZRS with Geo-Priority Replication</a> - adds zonal HA to prioritized regional replication when both zone and region protection are needed.</li><li><a href="#geo-priority-eligibility">RA-GZRS with Geo-Priority Replication</a> - supports eligible secondary reads while the workload completes write failover and recovery.</li><li><a href="#complement-replication-with-isolated-backup">Azure Backup - Vaulted Backup for HNS and Blob</a> - adds isolated point-in-time recovery for unwanted changes; its 24-hour planning RPO does not meet minutes-level targets.</li><li><a href="#operational-backup-for-blobs">Azure Backup - Operational Backup for Blob</a> - complements regional replication with local recovery from supported deletion or corruption.</li></ul></td>
+<td><ul><li><a href="https://learn.microsoft.com/azure/databricks/admin/managed-disaster-recovery" target="_blank" rel="noopener">Azure Databricks Managed Disaster Recovery</a> - provides recovery tailored to supported Databricks workloads; verify minutes-level RTO and RPO.</li><li><a href="#region-of-choice-backup-preview">Azure Backup to customer chosen regions</a> - may provide a required restore location (<strong>Limited preview</strong>); verify recovery-point age and restore time.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - offers service-specific replication and failover when native recovery does not fit; validate minutes-level objectives.</li></ul></td>
+</tr>
+<tr>
+<td><strong>Tier 2 - Business Operational</strong><br>RTO / RPO hours</td>
+<td><ul><li><a href="#storage-pattern-1">GRS</a> - provides Azure-managed account-wide regional copies when replication lag and failover fit hours-level targets.</li><li><a href="#storage-pattern-1">GZRS</a> - adds zonal HA to the regional recovery copy without customer-operated replication jobs.</li><li><a href="#complement-replication-with-isolated-backup">Azure Backup - Vaulted Backup for HNS and Blob</a> - provides isolated retained restore points; validate the 24-hour planning RPO and restore duration against the required hours-level window.</li><li><a href="#operational-backup-for-blobs">Azure Backup - Operational Backup for Blob</a> - restores supported local changes without a separate vault restore; it is not an independent regional recovery copy.</li></ul></td>
+<td><ul><li><a href="https://learn.microsoft.com/azure/databricks/admin/managed-disaster-recovery" target="_blank" rel="noopener">Azure Databricks Managed Disaster Recovery</a> - uses a workload-specific recovery approach for supported Databricks deployments; validate hours-level recovery.</li><li><a href="#region-of-choice-backup-preview">Azure Backup to customer chosen regions</a> - may support restore-location requirements (<strong>Limited preview</strong>); assess backup frequency and restore duration.</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - addresses service or region requirements beyond native options; validate hours-level recovery and cost.</li></ul></td>
+</tr>
+<tr>
+<td><strong>Tier 3 - Administrative</strong><br>RTO hours-days / RPO hours</td>
+<td><ul><li><a href="#storage-pattern-1">GRS</a> - provides managed regional replication when the workload can tolerate the tested failover window and data-loss exposure.</li><li><a href="#storage-pattern-1">GZRS</a> - retains zonal HA alongside regional DR when availability-zone resilience is also required.</li><li><a href="#complement-replication-with-isolated-backup">Azure Backup - Vaulted Backup for HNS and Blob</a> - supports retained-point recovery when longer restore windows are acceptable; validate the 24-hour planning RPO.</li><li><a href="#operational-backup-for-blobs">Azure Backup - Operational Backup for Blob</a> - provides local logical recovery alongside regional DR, without creating an independent regional copy.</li></ul></td>
+<td><ul><li><a href="https://learn.microsoft.com/azure/databricks/admin/managed-disaster-recovery" target="_blank" rel="noopener">Azure Databricks Managed Disaster Recovery</a> - provides recovery tailored to supported Databricks workloads when its scope and recovery windows fit.</li><li><a href="#region-of-choice-backup-preview">Azure Backup to customer chosen regions</a> - may address restore-location needs when longer recovery windows are acceptable (<strong>Limited preview</strong>).</li><li><a href="https://learn.microsoft.com/azure/storage/solution-integration/validated-partners/primary-secondary-storage/partner-overview" target="_blank" rel="noopener">Azure Storage partners</a> - offers validated service-specific alternatives; balance recovery needs against licensing and operational overhead.</li></ul></td>
+</tr>
+</tbody>
+</table></div>
+<p>For independent accounts, <a href="#storage-pattern-2">Blob Object Replication</a>, <a href="#storage-pattern-3">customer-orchestrated copy</a>, and <a href="#storage-pattern-4">customer-managed replication</a> are also DR candidates for supported objects. Choose them using the <a href="#replication-patterns">replication patterns</a> below, then prove the workload's RPO, RTO, and failback behavior.</p>
+<p><a id="evaluate-native-storage-data-replication-options"></a></p>
+<h2 id="replication-patterns">Replication patterns<a class="anchor" href="#replication-patterns" aria-label="Link to this section">#</a></h2>
+<h3 id="storage-pattern-1">Pattern 1: Geo-redundant storage<a class="anchor" href="#storage-pattern-1" aria-label="Link to this section">#</a></h3>
 <ul>
-<li>Object replication can asynchronously replicate <strong>block blobs</strong> between selected storage accounts and regions.</li>
-<li>It requires change feed on the source and blob versioning on source and destination accounts.</li>
-<li>Object replication does not support append blobs, page blobs, or accounts with hierarchical namespace enabled.</li>
-<li>A source account can currently replicate to no more than two destination accounts.</li>
+<li><strong>Deployment:</strong> One eligible account using GRS or GZRS, with an Azure-assigned paired secondary region.</li>
+<li><strong>Objects:</strong> Blob, ADLS Gen2, Files, Queues, and Tables, subject to account and redundancy eligibility.</li>
+<li><strong>Distribution:</strong> Azure-managed, asynchronous replication of account data. The destination region is fixed and replication is account-wide.</li>
+<li><strong>During an outage:</strong> Follow the supported storage-account failover procedure. RA-GRS and RA-GZRS allow secondary reads for supported services before failover, not secondary writes.</li>
+<li><strong>Best for / watch for:</strong> Simple account-wide protection when the paired destination is acceptable. Validate replication lag, failover eligibility, data-loss exposure, and application recovery separately.</li>
 </ul>
-<div class="alert important"><p class="alert-title"><svg viewBox="0 0 16 16"><path d="M8 1 15 14H1L8 1Zm-.9 4.6.2 4.4h1.4l.2-4.4Zm.9 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>Important</p><p>Replicated data does not by itself make the workload recoverable. Validate the application recovery path end to end.</p></div>
+<figure class="fig img" data-fig="storage-geo-redundancy"><div class="fig-tools"><button class="fig-zoom" type="button" aria-label="Expand figure" title="Expand"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><a class="fig-png" href="media/storage-geo-redundancy.svg" download title="Download image" aria-label="Download image"><svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a></div><div class="fig-stage"><img src="media/storage-geo-redundancy.svg" alt="One logical storage account spans a primary region and an Azure-assigned paired secondary region. Azure asynchronously replicates account data. The primary serves reads and writes; the secondary permits reads only for supported read-access configurations. Account failover and application recovery are separate actions." loading="lazy"></div><figcaption>Storage - Pattern 1: Azure manages replication within one logical account; the recovery procedure determines when and how applications resume.</figcaption></figure>
+<p><a id="geo-priority-eligibility"></a></p>
+<p>See <a href="https://learn.microsoft.com/azure/storage/common/storage-redundancy#geo-redundant-storage" target="_blank" rel="noopener">Azure Storage redundancy</a> and <a href="https://learn.microsoft.com/azure/storage/common/storage-disaster-recovery-guidance" target="_blank" rel="noopener">failover and failback guidance</a>. Evaluate <a href="https://docs.azure.cn/en-us/storage/common/storage-redundancy-priority-replication?tabs=portal" target="_blank" rel="noopener">Geo-Priority Replication</a> where available for a predictable RPO SLA; this reference applies to Azure operated by 21Vianet, so confirm applicability to your cloud.</p>
+<h3 id="storage-pattern-2">Pattern 2: Blob Object Replication<a class="anchor" href="#storage-pattern-2" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Deployment:</strong> Separate source and destination accounts in customer-selected, supported regions.</li>
+<li><strong>Objects:</strong> Block blobs only; not append blobs, page blobs, hierarchical namespace-enabled accounts, Files, Queues, or Tables.</li>
+<li><strong>Distribution:</strong> Azure asynchronously copies selected containers or datasets through object replication policies. Enable change feed on the source and blob versioning on both accounts. A source account can currently replicate to no more than two destination accounts.</li>
+<li><strong>During an outage:</strong> The customer redirects applications to the destination and follows the service's procedure to enable writes. Configure and validate reverse replication before failback.</li>
+<li><strong>Best for / watch for:</strong> Selective replication for resiliency, latency, or regulatory requirements. The destination already exists, but configuration, endpoint redirection, write enablement, and recovery validation remain customer responsibilities.</li>
+</ul>
+<figure class="fig img" data-fig="storage-object-replication"><div class="fig-tools"><button class="fig-zoom" type="button" aria-label="Expand figure" title="Expand"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><a class="fig-png" href="media/storage-object-replication.svg" download title="Download image" aria-label="Download image"><svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a></div><div class="fig-stage"><img src="media/storage-object-replication.svg" alt="Separate storage accounts in customer-selected regions replicate selected block blobs asynchronously through an Azure object replication policy. The destination is independently addressable, but application redirection, destination write enablement, and failback are customer-managed recovery steps." loading="lazy"></div><figcaption>Storage - Pattern 2: Azure replicates selected block blobs; the customer owns recovery across independent account endpoints.</figcaption></figure>
+<p><a id="priority-replication-eligibility"></a></p>
+<p>See <a href="https://learn.microsoft.com/azure/storage/blobs/object-replication-overview" target="_blank" rel="noopener">Object replication for block blobs</a>. For eligible workloads, evaluate <a href="https://learn.microsoft.com/azure/storage/blobs/object-replication-priority-replication?tabs=portal" target="_blank" rel="noopener">Priority Replication</a> for a predictable RPO SLA.</p>
+<p><a id="evaluate-custom-replication"></a></p>
+<h3 id="storage-pattern-3">Pattern 3: Customer-orchestrated copy<a class="anchor" href="#storage-pattern-3" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Deployment:</strong> Separate regional accounts and a scheduled copy process using AzCopy, Azure Data Factory / Synapse, or a supported Storage Mover transfer.</li>
+<li><strong>Objects:</strong> Blob, ADLS Gen2, and Azure Files datasets, subject to each tool's source, destination, protocol, and metadata support. Storage Mover support described below is specific to Blob and ADLS Gen2 transfers.</li>
+<li><strong>Distribution:</strong> Initial seeding followed by scheduled or incremental copies. Define change detection, deletion handling, retries, and destination validation.</li>
+<li><strong>During an outage:</strong> Recover from the last successfully copied and validated data. The customer redirects applications and manages failback.</li>
+<li><strong>Best for / watch for:</strong> Bulk movement, region expansion, planned relocation, or recovery objectives compatible with the copy schedule. A scheduled copy is not continuous low-RPO replication.</li>
+</ul>
+<figure class="fig img" data-fig="storage-orchestrated-copy"><div class="fig-tools"><button class="fig-zoom" type="button" aria-label="Expand figure" title="Expand"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><a class="fig-png" href="media/storage-orchestrated-copy.svg" download title="Download image" aria-label="Download image"><svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a></div><div class="fig-stage"><img src="media/storage-orchestrated-copy.svg" alt="AzCopy copies data directly between accounts in two regions using server-to-server APIs. A customer-managed execution host submits and monitors copy jobs without carrying the copied data. Scheduling, credentials, retries, validation, and application recovery remain customer-owned. Other pipeline and mover tools have service-specific execution and data paths." loading="lazy"></div><figcaption>Storage - Pattern 3: the AzCopy example separates the server-to-server data path from the customer-managed control path.</figcaption></figure>
+<h4 id="azcopy">AzCopy</h4>
+<p><a href="https://learn.microsoft.com/azure/storage/common/storage-use-azcopy-v10" target="_blank" rel="noopener">AzCopy</a> is a command-line tool built and maintained by the Azure Storage team. It is a strong fit for petabyte-scale bulk seeding and scheduled incremental copies to customer chosen regions, especially for ADLS Gen2. Account-to-account copies use server-to-server APIs, so data does not pass through the client.</p>
+<p>The customer deploys and maintains the execution environment, such as a VM, and owns authentication, scheduling, monitoring, retries, validation, and recovery.</p>
+<p>Key characteristics:</p>
+<ul>
+<li>For optimal performance, <a href="https://learn.microsoft.com/azure/storage/common/storage-use-azcopy-optimize#reduce-the-size-of-each-job" target="_blank" rel="noopener">keep each copy job below 10 million files</a>. This is a sizing recommendation, not a hard object-count limit.</li>
+<li>Tune concurrent requests with <code>AZCOPY_CONCURRENCY_VALUE</code> and benchmark against client resources and storage-account limits; do not assume a universal 3,000-request limit.</li>
+<li>Run jobs across multiple clients or VMs to reach target throughput and IOPS, preferably one AzCopy instance per client.</li>
+<li>Use <code>--overwrite=ifSourceNewer</code> for incremental runs and <code>--preserve-permissions</code> to carry ACLs where supported and authorized. Incremental copy does not propagate source deletions.</li>
+<li>Retain job plans and logs so failed transfers can be retried with <a href="https://learn.microsoft.com/azure/storage/common/storage-use-azcopy-configure" target="_blank" rel="noopener">AzCopy job resume</a>.</li>
+</ul>
+<p>Choose an AzCopy execution approach based on scale and resiliency needs. These approaches are variations of Storage - Pattern 3:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Execution approach</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A - Sequential copy of the entire account</strong></td>
+<td>One command for initial and incremental copy; simplest to operate.</td>
+<td>Sequential container creation; one large job can incur substantial tracking overhead. Retain job state to resume failures rather than restarting the entire copy.</td>
+</tr>
+<tr>
+<td><strong>B - Container-by-container from a single client</strong></td>
+<td>Smaller jobs; higher total scale; resume from the last successful container on failure.</td>
+<td>More scripting to enumerate containers, partition large containers, and handle errors.</td>
+</tr>
+<tr>
+<td><strong>C - Parallel containers across multiple clients or VMs</strong></td>
+<td>All of B, plus faster copying through parallel VM instances.</td>
+<td>Orchestration across VMs; more complex monitoring; can throttle the source or destination account under load.</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="azure-data-factory-synapse-pipelines">Azure Data Factory / Synapse pipelines</h4>
+<p>Use <a href="https://learn.microsoft.com/azure/data-factory/copy-activity-overview" target="_blank" rel="noopener">Copy activity in Azure Data Factory and Azure Synapse</a> for orchestrated, incremental replication to a chosen region, especially for ADLS Gen2 where object replication is not available. Pipelines support scheduling, monitoring, and data transformation, but add development and operational overhead.</p>
+<p>Define how the pipeline detects changed data, handles deletions and failed copies, and validates the destination. The customer owns pipeline configuration, credentials, integration-runtime selection, monitoring, and recovery testing; a successful copy run is not an end-to-end disaster recovery guarantee.</p>
+<h4 id="storage-mover">Storage Mover</h4>
+<p><a href="https://learn.microsoft.com/azure/storage-mover/service-overview" target="_blank" rel="noopener">Storage Mover</a> supports secondary-account seeding, historical data movement, periodic synchronization, planned relocation, and region expansion. Validate the supported Blob or ADLS Gen2 source-to-target combination.</p>
+<p>Moves include only the latest version of files. The process is batch-oriented rather than continuous; use it when an RPO measured in hours or days is acceptable, not for low-RPO workloads.</p>
+<h3 id="storage-pattern-4">Pattern 4: Customer-managed service replication<a class="anchor" href="#storage-pattern-4" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Deployment:</strong> Separate regional accounts plus customer-operated replication logic, or a validated partner offering.</li>
+<li><strong>Objects:</strong> The services explicitly supported by the implementation. For Queue and Table scenarios in customer chosen regions, implement replication using service APIs or application logic.</li>
+<li><strong>Distribution:</strong> Capture changes through an application-owned mechanism and apply them to the destination. Define handling for updates, deletes, ordering, retries, and duplicates; do not assume a built-in change feed.</li>
+<li><strong>During an outage:</strong> Reconcile the destination, manage producer and consumer cutover, redirect applications, and prevent conflicting writes. Test return to the original region.</li>
+<li><strong>Best for / watch for:</strong> Requirements not met by native replication or copy tools. The customer owns infrastructure, ongoing operation, consistency, monitoring, and recovery, unless a partner contract explicitly assigns these responsibilities.</li>
+</ul>
+<figure class="fig img" data-fig="storage-customer-replication"><div class="fig-tools"><button class="fig-zoom" type="button" aria-label="Expand figure" title="Expand"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><a class="fig-png" href="media/storage-customer-replication.svg" download title="Download image" aria-label="Download image"><svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a></div><div class="fig-stage"><img src="media/storage-customer-replication.svg" alt="Application writes in the primary region are captured through an application-owned change log. A customer-operated replication worker reads the log, applies changes through service APIs to a separate destination account, and records checkpoints. The customer defines ordering, deletion handling, retries, duplicate handling, and producer and consumer cutover." loading="lazy"></div><figcaption>Storage - Pattern 4: an illustrative application-owned change-capture design, not a native Queue or Table replication feature.</figcaption></figure>
+<p><a id="evaluate-product-specific-replication"></a>
+<a id="databricks"></a></p>
+<h3 id="storage-pattern-5">Pattern 5: Databricks replication and recovery<a class="anchor" href="#storage-pattern-5" aria-label="Link to this section">#</a></h3>
+<p>Product-specific replication can preserve application metadata, consistency, and recovery semantics that generic storage replication cannot. Evaluate these options alongside Azure Storage services to reduce custom orchestration and improve end-to-end workload recovery.</p>
+<p>For data lake workloads using Databricks, evaluate table-level cloning and managed disaster recovery alongside storage-level replication. Cloning can seed or refresh a secondary dataset, but it does not by itself recover the workspace, permissions, jobs, or application dependencies. Validate deep versus shallow clone behavior, supported table formats, destination support, and refresh procedures before treating a clone as an independent recovery copy.</p>
+<ul>
+<li><a href="https://delta.io/blog/delta-lake-clone/" target="_blank" rel="noopener">Delta Lake Clone</a></li>
+<li><a href="https://learn.microsoft.com/azure/databricks/tables/operations/clone" target="_blank" rel="noopener">Clone a table on Azure Databricks</a></li>
+<li><a href="https://learn.microsoft.com/azure/databricks/iceberg/clone" target="_blank" rel="noopener">Clone a managed Iceberg table</a></li>
+<li><a href="https://learn.microsoft.com/azure/databricks/ingestion/data-migration/clone-parquet" target="_blank" rel="noopener">Incrementally clone Parquet and Apache Iceberg tables to Delta Lake</a></li>
+<li><a href="https://learn.microsoft.com/azure/databricks/admin/managed-disaster-recovery" target="_blank" rel="noopener">Managed disaster recovery</a></li>
+</ul>
+<p><a id="evaluate-azure-storage-partners"></a></p>
+<h2 id="azure-storage-partners">Azure Storage partners<a class="anchor" href="#azure-storage-partners" aria-label="Link to this section">#</a></h2>
+<p>When built-in replication, backup, or data-movement services cannot meet your workload requirements, use <a href="https://learn.microsoft.com/azure/storage/solution-integration/" target="_blank" rel="noopener">Azure Storage solutions from Microsoft partners</a> to find validated offerings that extend Azure Storage capabilities.</p>
+<p>Evaluate partner solutions against the following criteria:</p>
+<ul>
+<li><strong>Workload fit:</strong> Confirm support for the required storage services, data formats, account scale, change rate, and destination regions.</li>
+<li><strong>Recovery objectives:</strong> Validate RPO and RTO during normal operations, regional disruption, and large-scale recovery.</li>
+<li><strong>HA and DR:</strong> Confirm support for continuous replication, backup recovery, failover, and failback.</li>
+<li><strong>Security and compliance:</strong> Assess encryption, customer-managed keys, access controls, isolation, residency, and auditing.</li>
+<li><strong>Operational ownership:</strong> Define deployment, monitoring, incident, validation, failover, and support responsibilities.</li>
+<li><strong>Cost and scale:</strong> Include licensing, storage, transfer, compute, monitoring, testing, and operations.</li>
+</ul>
+<p>Before production adoption, validate the solution through workload-representative performance testing and disaster recovery exercises. Confirm that recovery procedures address application dependencies, endpoint redirection, write enablement, data consistency, and failback, not only data replication.</p>
+<h2 id="decision-tree">Decision tree<a class="anchor" href="#decision-tree" aria-label="Link to this section">#</a></h2>
+<p>Check object support and regional eligibility before following the chart. The results are candidate patterns, not guarantees of service support or recovery time. For Azure Files, confirm share protocol, permissions, and metadata support for the selected copy tool or partner solution.</p>
+<figure class="fig img" data-fig="storage-decision-tree"><div class="fig-tools"><button class="fig-zoom" type="button" aria-label="Expand figure" title="Expand"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><a class="fig-png" href="media/storage-decision-tree.svg" download title="Download image" aria-label="Download image"><svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a></div><div class="fig-stage"><img src="media/storage-decision-tree.svg" alt="Choose geo-redundant storage if eligible account-wide protection in the assigned paired region meets requirements. Otherwise choose Blob Object Replication if eligible block blobs and native asynchronous replication fit. Otherwise choose customer-orchestrated copy if supported Blob, ADLS Gen2, or Azure Files datasets can meet RPO with scheduled copy. For Queue, Table, or other service-specific requirements, evaluate customer-managed or partner replication. Confirm protocol and metadata support, and test end-to-end recovery for every result." loading="lazy"></div><figcaption>Select a candidate pattern, then validate RPO, RTO, security, cost, operational ownership, and failback. Add isolated backup where required.</figcaption></figure>
 <h2 id="reference-links">Reference links<a class="anchor" href="#reference-links" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><a href="https://learn.microsoft.com/azure/storage/common/storage-redundancy" target="_blank" rel="noopener">Azure Storage redundancy</a></li>
 <li><a href="https://learn.microsoft.com/azure/storage/blobs/object-replication-overview" target="_blank" rel="noopener">Object replication for block blobs</a></li>
+<li><a href="https://learn.microsoft.com/azure/storage/common/storage-disaster-recovery-guidance" target="_blank" rel="noopener">Storage disaster recovery and account failover</a></li>
+<li><a href="https://learn.microsoft.com/azure/storage/common/storage-use-azcopy-optimize" target="_blank" rel="noopener">AzCopy performance and job sizing</a></li>
+<li><a href="https://learn.microsoft.com/azure/data-factory/copy-activity-overview" target="_blank" rel="noopener">Copy activity in Azure Data Factory and Azure Synapse</a></li>
+<li><a href="https://learn.microsoft.com/azure/storage/common/storage-use-azcopy-files" target="_blank" rel="noopener">Transfer Azure Files data with AzCopy</a></li>
+<li><a href="https://learn.microsoft.com/azure/data-factory/connector-azure-file-storage" target="_blank" rel="noopener">Azure Files connector for Azure Data Factory and Azure Synapse</a></li>
+<li><a href="https://learn.microsoft.com/azure/storage-mover/service-overview" target="_blank" rel="noopener">Storage Mover overview</a></li>
+<li><a href="https://learn.microsoft.com/azure/storage/solution-integration/" target="_blank" rel="noopener">Azure Storage partner solutions</a></li>
+<li><a href="https://learn.microsoft.com/azure/backup/azure-data-lake-storage-backup-support-matrix" target="_blank" rel="noopener">ADLS vaulted backup support matrix</a></li>
 </ul>
 <h2 id="next-step">Next step<a class="anchor" href="#next-step" aria-label="Link to this section">#</a></h2>
 <p class="nextstep"><a class="btn-next" href="restore-across-regions.html">Backup and restore across regions<svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></a></p></article>
@@ -131,7 +351,7 @@
   <aside class="rail" aria-label="In this article">
     <div class="rail-in">
       <p class="rail-h">In this article</p>
-      <ul><li><a href="#paired-region-options">Paired-region options</a></li><li><a href="#region-of-choice-options">Region-of-choice options</a></li><li><a href="#reference-links">Reference links</a></li></ul>
+      <ul><li><a href="#summary">Summary</a></li><li><a href="#platform-native-geo-replication">Platform-native geo-replication</a></li><li><a href="#high-availability-scenarios">High Availability scenarios</a></li><li><a href="#disaster-recovery-scenarios">Disaster Recovery scenarios</a></li><li><a href="#replication-patterns">Replication patterns</a></li><li><a href="#azure-storage-partners">Azure Storage partners</a></li><li><a href="#decision-tree">Decision tree</a></li><li><a href="#reference-links">Reference links</a></li></ul>
     </div>
   </aside>
 </div>

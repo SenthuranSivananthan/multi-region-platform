@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420" role="img" aria-labelledby="title description" font-family="Segoe UI, Arial, sans-serif">
+  <title id="title">Customer-managed service replication</title>
+  <desc id="description">An illustrative customer design captures application writes in an application-owned change log. A worker applies them through service APIs to a destination account and tracks progress. This is not a native Queue or Table replication feature.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0 10 4 0 8Z" fill="#0F6CBD"/></marker>
+  </defs>
+  <rect width="900" height="420" rx="14" fill="#FFFFFF"/>
+  <text x="450" y="34" text-anchor="middle" font-size="21" font-weight="600" fill="#243A57">Illustrative customer-owned change-capture design</text>
+  <rect x="24" y="66" width="266" height="240" rx="12" fill="#F7FBFE" stroke="#8CC0EE" stroke-width="2"/>
+  <text x="157" y="98" text-anchor="middle" font-size="18" font-weight="600" fill="#0B3A63">Primary region</text>
+  <rect x="44" y="116" width="226" height="56" rx="10" fill="#E8F3FC" stroke="#0F6CBD"/>
+  <text x="157" y="140" text-anchor="middle" font-size="17" font-weight="600" fill="#0B3A63">Application writes</text>
+  <text x="157" y="161" text-anchor="middle" font-size="14" fill="#243A57">Source Queue / Table state</text>
+  <path d="M157 175V208" fill="none" stroke="#0F6CBD" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="44" y="212" width="226" height="64" rx="10" fill="#FFFFFF" stroke="#0F6CBD"/>
+  <text x="157" y="237" text-anchor="middle" font-size="16" font-weight="600" fill="#0B3A63">Application-owned</text>
+  <text x="157" y="259" text-anchor="middle" font-size="16" fill="#243A57">change log / outbox</text>
+  <rect x="342" y="192" width="216" height="104" rx="12" fill="#F2F4F7" stroke="#8794A5" stroke-width="2"/>
+  <text x="450" y="220" text-anchor="middle" font-size="17" font-weight="600" fill="#243A57">Replication worker</text>
+  <text x="450" y="248" text-anchor="middle" font-size="15" fill="#243A57">Apply changes via APIs</text>
+  <text x="450" y="274" text-anchor="middle" font-size="15" fill="#243A57">Track checkpoints</text>
+  <path d="M272 244H338" fill="none" stroke="#0F6CBD" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="305" y="226" text-anchor="middle" font-size="14" fill="#0F548C">Read</text>
+  <rect x="610" y="66" width="266" height="240" rx="12" fill="#F0FAF8" stroke="#75BDB3" stroke-width="2"/>
+  <text x="743" y="98" text-anchor="middle" font-size="18" font-weight="600" fill="#065F55">Customer-selected region</text>
+  <rect x="630" y="192" width="226" height="104" rx="10" fill="#E3F3EF" stroke="#087F73"/>
+  <text x="743" y="222" text-anchor="middle" font-size="17" font-weight="600" fill="#065F55">Destination account</text>
+  <text x="743" y="248" text-anchor="middle" font-size="15" fill="#243A57">Queue / Table state</text>
+  <text x="743" y="274" text-anchor="middle" font-size="15" fill="#243A57">Validate + reconcile</text>
+  <path d="M560 244H626" fill="none" stroke="#0F6CBD" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="593" y="226" text-anchor="middle" font-size="14" fill="#0F548C">Apply</text>
+  <text x="450" y="132" text-anchor="middle" font-size="15" fill="#5B6778">Not a built-in</text>
+  <text x="450" y="154" text-anchor="middle" font-size="15" fill="#5B6778">service change feed</text>
+  <rect x="24" y="336" width="852" height="62" rx="10" fill="#F2F4F7"/>
+  <text x="450" y="360" text-anchor="middle" font-size="16" font-weight="600" fill="#243A57">Customer owns consistency and recovery</text>
+  <text x="450" y="384" text-anchor="middle" font-size="15" fill="#243A57">Capture reliability, deletes, ordering, retries, duplicates, producer / consumer cutover</text>
+</svg>
